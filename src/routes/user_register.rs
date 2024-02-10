@@ -11,7 +11,7 @@ pub struct RegisterForm {
     confirm_password: String,
 }
 
-type FormErrors<'a> = HashMap<&'a str, &'a str>;
+type FormErrors = HashMap<&'static str, &'static str>;
 
 impl RegisterForm {
     fn get_errors(&self) -> FormErrors {
@@ -38,9 +38,9 @@ impl RegisterForm {
 }
 
 #[derive(Serialize, Default, Debug)]
-pub struct RegisterPageData<'a> {
+pub struct RegisterPageData {
     form: RegisterForm,
-    errors: FormErrors<'a>,
+    errors: FormErrors,
 }
 
 pub async fn get(Extension(template_engine): Extension<TemplateEngine>) -> Response {
@@ -52,11 +52,9 @@ pub async fn post(
     Form(form): Form<RegisterForm>,
 ) -> Response {
     let errors: FormErrors = form.get_errors();
-    let cloned_form = form.clone();
     let data = RegisterPageData {
-        form: cloned_form,
+        form,
         errors,
     };
-    dbg!(&data);
     render_response(&template_engine, "user/register", &data)
 }
