@@ -1,0 +1,44 @@
+{{> base_head}}
+<body>
+  <div class="container">
+    <h1 class="title">Register</h1>
+    <form class="form" action="/user/register" method="post" novalidate>
+      <div class="field">
+        <label class="label">Email</label>
+        <div class="control">
+          <input class="input {{#if errors.email}}is-danger{{/if}}" type="email" placeholder="Enter your email" name="email" id="email" value="{{form.email}}">
+        </div>
+        {{#if errors.email}}
+        <p class="help is-danger">{{errors.email}}</p>
+        {{/if}}
+      </div>
+
+      <div class="field">
+        <label class="label">Password</label>
+        <div class="control">
+          <input class="input {{#if errors.password}}is-danger{{/if}}" type="password" placeholder="Enter your password" name="password" id="password" value="{{form.password}}">
+        </div>
+        {{#if errors.password}}
+        <p class="help is-danger">{{errors.password}}</p>
+        {{/if}}
+      </div>
+
+      <div class="field">
+        <label class="label">Confirm Password</label>
+        <div class="control">
+          <input class="input {{#if errors.confirm_password}}is-danger{{/if}}" type="password" placeholder="Confirm your password" name="confirm_password" id="confirm_password" value="{{form.confirm_password}}">
+        </div>
+        {{#if errors.confirm_password}}
+        <p class="help is-danger">{{errors.confirm_password}}</p>
+        {{/if}}
+      </div>
+
+      <div class="field">
+        <div class="control">
+          <button class="button is-primary">Register</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</body>
+{{> base_footer}}
