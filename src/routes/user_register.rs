@@ -1,13 +1,19 @@
 use std::collections::HashMap;
 
-use crate::templates::{render_response, TemplateEngine};
+use crate::{
+    password,
+    templates::{render_response, TemplateEngine},
+};
 use axum::{
-    http::StatusCode, response::{IntoResponse, Redirect, Response}, Extension, Form
+    http::StatusCode,
+    response::{IntoResponse, Redirect, Response},
+    Extension, Form,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-#[derive(Deserialize, Serialize, Default, Debug, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 pub struct RegisterForm {
     email: String,
     password: String,
@@ -70,7 +76,8 @@ pub async fn post(
                 }
                 Err(e) => {
                     tracing::error!("Failed to create user: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user").into_response();
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user")
+                        .into_response();
                 }
             }
         }
@@ -86,15 +93,31 @@ pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
         .filter(user::Column::Email.eq(email))
         .one(db)
         .await
-        .is_ok()
+        .ok()
+        .flatten()
+        .is_some()
 }
 
-pub async fn create_user(db: &DatabaseConnection, form: &RegisterForm) -> Result<user::ActiveModel, sea_orm::prelude::DbErr> {
+#[derive(Error, Debug)]
+pub enum CreateUserError {
+    #[error("Failed to hash password")]
+    HashPassword(password::HashError),
+    #[error("Failed to save user")]
+    SaveUser(#[from] sea_orm::error::DbErr),
+}
+
+pub async fn create_user(
+    db: &DatabaseConnection,
+    form: &RegisterForm,
+) -> Result<user::ActiveModel, CreateUserError> {
+    let hashed_password = password::hash(&form.password).map_err(CreateUserError::HashPassword)?;
+
     user::ActiveModel {
         email: Set(form.email.to_owned()),
-        password: Set(form.password.to_owned()),
+        password: Set(hashed_password),
         ..Default::default()
     }
     .save(db)
     .await
+    .map_err(CreateUserError::SaveUser)
 }

@@ -1,4 +1,5 @@
 mod user_register;
+mod user_login;
 
 use axum::{
     response::Response,
@@ -18,6 +19,8 @@ pub fn create_router(
         .route("/", get(get_root))
         .route("/user/register", get(user_register::get))
         .route("/user/register", post(user_register::post))
+        .route("/user/login", get(user_login::get))
+        .route("/user/login", post(user_login::post))
         .layer(Extension(template_engine))
         .layer(Extension(database_connection))
         .layer(TraceLayer::new_for_http())
