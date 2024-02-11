@@ -2,7 +2,7 @@
 <body>
   <div class="container">
     <h1 class="title">Login</h1>
-    <form class="form" action="/user/login" method="post">
+    <form class="form" action="/user/login{{#if next_url }}?next={{next_url}}{{/if}}" method="post">
       <div class="field">
         <label class="label">Email</label>
         <div class="control">

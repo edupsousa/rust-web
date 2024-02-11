@@ -23,3 +23,6 @@ validator = { version = "0.16.1" }
 argon2 = "0.5.3"
 rand = "0.8.5"
 thiserror = "1.0.56"
+axum-login = "0.13.1"
+tower-sessions = "0.10.2"
+async-trait = "0.1.77"

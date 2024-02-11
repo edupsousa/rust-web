@@ -5,7 +5,7 @@ use argon2::{
     password_hash::{
         Error,
         rand_core::OsRng,
-        PasswordHash, PasswordHasher, PasswordVerifier, SaltString
+        PasswordHasher, SaltString
     },
     Argon2
   };
@@ -49,20 +49,6 @@ pub async fn create_user(
     .map_err(CreateUserError::SaveUser)
 }
 
-pub async fn authenticate_user(
-    db: &DatabaseConnection,
-    email: &str,
-    password: &str,
-) -> Option<user::Model> {
-    user::Entity::find()
-        .filter(user::Column::Email.contains(email))
-        .one(db)
-        .await
-        .ok()
-        .flatten()
-        .filter(|user| verify(password, &user.password))
-}
-
 type HashError = Error;
 
 fn hash(password: &str) -> Result<String, Error> {
@@ -71,10 +57,4 @@ fn hash(password: &str) -> Result<String, Error> {
   let password_hash = argon2.hash_password(password.as_bytes(), &salt)?.to_string();
   
   Ok(password_hash)
-}
-
-fn verify(password: &str, hash: &str) -> bool {
-  let argon2 = Argon2::default();
-  let password_hash = PasswordHash::new(hash).unwrap();
-  argon2.verify_password(password.as_bytes(), &password_hash).is_ok()
 }

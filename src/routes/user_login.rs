@@ -1,15 +1,17 @@
 use std::collections::HashMap;
 
+use crate::services::auth_service::{self, AuthSession};
 use crate::templates::{render_response, TemplateEngine};
-use crate::services::user_service;
+use axum::extract::Query;
+use axum::http::StatusCode;
 use axum::{
-    response::{IntoResponse, Redirect, Response}, Extension, Form
+    response::{IntoResponse, Redirect, Response},
+    Extension, Form,
 };
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use validator::validate_email;
 
-#[derive(Deserialize, Serialize, Default, Debug)]
+#[derive(Deserialize, Serialize, Default, Debug, Clone)]
 pub struct LoginForm {
     email: String,
     password: String,
@@ -35,38 +37,78 @@ impl LoginForm {
     }
 }
 
+impl From<LoginForm> for auth_service::Credentials {
+    fn from(form: LoginForm) -> Self {
+        auth_service::Credentials {
+            email: form.email,
+            password: form.password,
+        }
+    }
+
+}
+
 #[derive(Serialize, Default, Debug)]
 pub struct LoginPageData {
     form: LoginForm,
     errors: FormErrors,
+    next_url: Option<String>,
 }
 
-pub async fn get(Extension(template_engine): Extension<TemplateEngine>) -> Response {
-    render_response(
-        &template_engine,
-        "user/login",
-        &LoginPageData::default(),
-    )
+#[derive(Deserialize)]
+pub struct NextUrl {
+    next: Option<String>,
 }
 
-pub async fn post(
-    Extension(template_engine): Extension<TemplateEngine>,
-    Extension(db): Extension<DatabaseConnection>,
-    Form(form): Form<LoginForm>,
+pub fn render_login_page(
+    template_engine: &TemplateEngine,
+    next: Option<String>,
+    form: LoginForm,
+    errors: FormErrors,
 ) -> Response {
-    let mut errors: FormErrors = form.get_errors();
-    if errors.is_empty() {
-        let user = user_service::authenticate_user(&db, &form.email, &form.password).await;
-        if user.is_none() {
-            errors.insert("password", "Invalid email or password");
-        } else {
-          return Redirect::to("/").into_response();
-        }
-    }
-
     let data = LoginPageData {
+        next_url: next,
         form,
         errors,
     };
-    render_response(&template_engine, "user/login", &data)
+    render_response(template_engine, "user/login", &data)
+}
+
+pub async fn get(
+    Extension(template_engine): Extension<TemplateEngine>,
+    Query(NextUrl { next }): Query<NextUrl>,
+) -> Response {
+    render_login_page(&template_engine, next, LoginForm::default(), FormErrors::default())
+}
+
+pub async fn post(
+    mut auth_session: AuthSession,
+    Extension(template_engine): Extension<TemplateEngine>,
+    Query(NextUrl { next }): Query<NextUrl>,
+    Form(form): Form<LoginForm>,
+) -> Response {
+    let mut errors: FormErrors = form.get_errors();
+    if !errors.is_empty() {
+        return render_login_page(&template_engine, next, form, errors);
+    }
+    let user = match auth_session.authenticate(form.clone().into()).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            errors.insert("password", "Invalid email or password");
+            return render_login_page(&template_engine, next, form, errors);
+        },
+        Err(e) => {
+            tracing::error!("Failed to authenticate user: {:?}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to authenticate user").into_response();
+        },
+    };
+
+    if auth_session.login(&user).await.is_err() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to login").into_response();
+    }
+
+    if let Some(next) = next {
+        return Redirect::to(&next).into_response();
+    }
+    
+    Redirect::to("/").into_response()
 }
