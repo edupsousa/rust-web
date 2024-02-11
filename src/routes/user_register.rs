@@ -80,7 +80,7 @@ pub async fn post(
         } else {
             match user_service::create_user(&db, form.into()).await {
                 Ok(_) => {
-                    return Redirect::to("/user/login?registered=true").into_response();
+                    return Redirect::to("/login?registered=true").into_response();
                 }
                 Err(e) => {
                     tracing::error!("Failed to create user: {:?}", e);

@@ -1,15 +1,22 @@
-use std::collections::HashMap;
 
 use crate::services::auth_service::{self, AuthSession};
 use crate::templates::{render_response, TemplateEngine};
+use axum::{routing::{get, post}, Router};
 use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::{
-    response::{IntoResponse, Redirect, Response},
-    Extension, Form,
+  response::{IntoResponse, Redirect, Response},
+  Extension, Form,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use validator::validate_email;
+
+pub fn router() -> Router {
+  Router::new()
+    .route("/login", get(get_login))
+    .route("/login", post(post_login))
+}
 
 #[derive(Deserialize, Serialize, Default, Debug, Clone)]
 pub struct LoginForm {
@@ -73,14 +80,14 @@ pub fn render_login_page(
     render_response(template_engine, "user/login", &data)
 }
 
-pub async fn get(
+async fn get_login(
     Extension(template_engine): Extension<TemplateEngine>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Response {
     render_login_page(&template_engine, next, LoginForm::default(), FormErrors::default())
 }
 
-pub async fn post(
+async fn post_login(
     mut auth_session: AuthSession,
     Extension(template_engine): Extension<TemplateEngine>,
     Query(NextUrl { next }): Query<NextUrl>,
