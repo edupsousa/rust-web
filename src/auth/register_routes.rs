@@ -60,7 +60,7 @@ pub struct RegisterPageData {
     errors: FormErrors,
 }
 
-pub async fn get(Extension(template_engine): Extension<TemplateEngine>) -> Response {
+pub async fn get_register(Extension(template_engine): Extension<TemplateEngine>) -> Response {
     render_response(
         &template_engine,
         "user/register",
@@ -68,7 +68,7 @@ pub async fn get(Extension(template_engine): Extension<TemplateEngine>) -> Respo
     )
 }
 
-pub async fn post(
+pub async fn post_register(
     Extension(template_engine): Extension<TemplateEngine>,
     Extension(db): Extension<DatabaseConnection>,
     Form(form): Form<RegisterForm>,

@@ -1,8 +1,8 @@
-mod routes;
 mod templates;
 mod database;
 mod services;
 mod auth;
+mod app;
 
 #[tokio::main]
 async fn main() {
@@ -14,7 +14,7 @@ async fn main() {
 
     let database_connection = database::connect().await;
     let template_engine = templates::create_engine();
-    let app = routes::create_router(template_engine, database_connection);
+    let app = app::create_app(template_engine, database_connection);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("Listening on {}", listener.local_addr().unwrap());
