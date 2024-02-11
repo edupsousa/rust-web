@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use crate::templates::{render_response, TemplateEngine};
 use axum::{
-    response::{IntoResponse, Redirect, Response},
-    Extension, Form,
+    http::StatusCode, response::{IntoResponse, Redirect, Response}, Extension, Form
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default, Debug, Clone)]
@@ -60,10 +59,21 @@ pub async fn post(
     Extension(db): Extension<DatabaseConnection>,
     Form(form): Form<RegisterForm>,
 ) -> Response {
-    let errors: FormErrors = form.get_errors();
+    let mut errors: FormErrors = form.get_errors();
     if errors.is_empty() {
-        create_user(&db, &form).await;
-        return Redirect::to("/user/login?registered=true").into_response();
+        if user_exists(&db, &form.email).await {
+            errors.insert("email", "Email is already registered");
+        } else {
+            match create_user(&db, &form).await {
+                Ok(_) => {
+                    return Redirect::to("/user/login?registered=true").into_response();
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create user: {:?}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user").into_response();
+                }
+            }
+        }
     }
     let data = RegisterPageData { form, errors };
     render_response(&template_engine, "user/register", &data)
@@ -71,7 +81,15 @@ pub async fn post(
 
 use entity::user;
 
-pub async fn create_user(db: &DatabaseConnection, form: &RegisterForm) {
+pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
+    user::Entity::find()
+        .filter(user::Column::Email.eq(email))
+        .one(db)
+        .await
+        .is_ok()
+}
+
+pub async fn create_user(db: &DatabaseConnection, form: &RegisterForm) -> Result<user::ActiveModel, sea_orm::prelude::DbErr> {
     user::ActiveModel {
         email: Set(form.email.to_owned()),
         password: Set(form.password.to_owned()),
@@ -79,5 +97,4 @@ pub async fn create_user(db: &DatabaseConnection, form: &RegisterForm) {
     }
     .save(db)
     .await
-    .expect("Failed to save user");
 }
