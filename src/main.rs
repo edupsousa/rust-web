@@ -1,7 +1,7 @@
 mod routes;
 mod templates;
 mod database;
-mod password;
+mod services;
 
 #[tokio::main]
 async fn main() {

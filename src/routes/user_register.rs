@@ -1,17 +1,16 @@
 use std::collections::HashMap;
 
 use crate::{
-    password,
     templates::{render_response, TemplateEngine},
+    services::user_service,
 };
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
     Extension, Form,
 };
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct RegisterForm {
@@ -46,6 +45,15 @@ impl RegisterForm {
     }
 }
 
+impl From<RegisterForm> for user_service::CreateUserData {
+    fn from(form: RegisterForm) -> Self {
+        user_service::CreateUserData {
+            email: form.email,
+            password: form.password,
+        }
+    }
+}
+
 #[derive(Serialize, Default, Debug)]
 pub struct RegisterPageData {
     form: RegisterForm,
@@ -67,10 +75,10 @@ pub async fn post(
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if errors.is_empty() {
-        if user_exists(&db, &form.email).await {
+        if user_service::user_exists(&db, &form.email).await {
             errors.insert("email", "Email is already registered");
         } else {
-            match create_user(&db, &form).await {
+            match user_service::create_user(&db, form.into()).await {
                 Ok(_) => {
                     return Redirect::to("/user/login?registered=true").into_response();
                 }
@@ -86,38 +94,3 @@ pub async fn post(
     render_response(&template_engine, "user/register", &data)
 }
 
-use entity::user;
-
-pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
-    user::Entity::find()
-        .filter(user::Column::Email.eq(email))
-        .one(db)
-        .await
-        .ok()
-        .flatten()
-        .is_some()
-}
-
-#[derive(Error, Debug)]
-pub enum CreateUserError {
-    #[error("Failed to hash password")]
-    HashPassword(password::HashError),
-    #[error("Failed to save user")]
-    SaveUser(#[from] sea_orm::error::DbErr),
-}
-
-pub async fn create_user(
-    db: &DatabaseConnection,
-    form: &RegisterForm,
-) -> Result<user::ActiveModel, CreateUserError> {
-    let hashed_password = password::hash(&form.password).map_err(CreateUserError::HashPassword)?;
-
-    user::ActiveModel {
-        email: Set(form.email.to_owned()),
-        password: Set(hashed_password),
-        ..Default::default()
-    }
-    .save(db)
-    .await
-    .map_err(CreateUserError::SaveUser)
-}

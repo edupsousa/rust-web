@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
 use crate::templates::{render_response, TemplateEngine};
-use crate::password;
+use crate::services::user_service;
 use axum::{
     response::{IntoResponse, Redirect, Response}, Extension, Form
 };
-use entity::user::{Column, Entity as User, Model as UserModel};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use validator::validate_email;
 
@@ -57,7 +56,7 @@ pub async fn post(
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if errors.is_empty() {
-        let user = authenticate_user(&db, &form.email, &form.password).await;
+        let user = user_service::authenticate_user(&db, &form.email, &form.password).await;
         if user.is_none() {
             errors.insert("password", "Invalid email or password");
         } else {
@@ -70,18 +69,4 @@ pub async fn post(
         errors,
     };
     render_response(&template_engine, "user/login", &data)
-}
-
-async fn authenticate_user(
-    db: &DatabaseConnection,
-    email: &str,
-    password: &str,
-) -> Option<UserModel> {
-    User::find()
-        .filter(Column::Email.contains(email))
-        .one(db)
-        .await
-        .ok()
-        .flatten()
-        .filter(|user| password::verify(password, &user.password))
 }
