@@ -1,5 +1,4 @@
-
-use crate::services::auth_service::{self, AuthSession};
+use crate::auth;
 use crate::templates::{render_response, TemplateEngine};
 use axum::extract::Query;
 use axum::http::StatusCode;
@@ -37,9 +36,9 @@ impl LoginForm {
     }
 }
 
-impl From<LoginForm> for auth_service::Credentials {
+impl From<LoginForm> for auth::layer::Credentials {
     fn from(form: LoginForm) -> Self {
-        auth_service::Credentials {
+        auth::layer::Credentials {
             email: form.email,
             password: form.password,
         }
@@ -81,7 +80,7 @@ pub async fn get_login(
 }
 
 pub async fn post_login(
-    mut auth_session: AuthSession,
+    mut auth_session: auth::layer::AuthSession,
     Extension(template_engine): Extension<TemplateEngine>,
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
