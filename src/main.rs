@@ -1,6 +1,5 @@
 mod templates;
 mod database;
-mod services;
 mod auth;
 mod app;
 
