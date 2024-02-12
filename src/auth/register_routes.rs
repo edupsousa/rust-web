@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::database;
 use crate::templates::{render_response, TemplateEngine};
 use axum::{
     http::StatusCode,
@@ -8,7 +9,6 @@ use axum::{
 };
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use super::database;
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct RegisterForm {

@@ -5,7 +5,9 @@ use entity::session;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde_json::json;
 use tower_sessions::{
-    cookie::time::OffsetDateTime, session::{Id, Record}, session_store, ExpiredDeletion, SessionStore
+    cookie::time::OffsetDateTime,
+    session::{Id, Record},
+    session_store, ExpiredDeletion, SessionStore,
 };
 
 #[derive(Debug, Clone)]
@@ -28,11 +30,11 @@ impl ExpiredDeletion for DatabaseSessionStore {
             .as_secs() as i32;
 
         session::Entity::delete_many()
-          .filter(session::Column::Expiry.lt(now))
-          .exec(&self.db)
-          .await
-          .unwrap();
-        
+            .filter(session::Column::Expiry.lt(now))
+            .exec(&self.db)
+            .await
+            .unwrap();
+
         Ok(())
     }
 }
@@ -45,7 +47,7 @@ impl SessionStore for DatabaseSessionStore {
             data: Set(json!(record.data).to_string()),
             expiry: Set(record.expiry_date.unix_timestamp().try_into().unwrap()),
         };
-        
+
         session::Entity::insert(new_session)
             .exec(&self.db)
             .await

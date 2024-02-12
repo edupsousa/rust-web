@@ -3,8 +3,8 @@ use crate::templates::{render_response, TemplateEngine};
 use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::{
-  response::{IntoResponse, Redirect, Response},
-  Extension, Form,
+    response::{IntoResponse, Redirect, Response},
+    Extension, Form,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -43,7 +43,6 @@ impl From<LoginForm> for auth::layer::Credentials {
             password: form.password,
         }
     }
-
 }
 
 #[derive(Serialize, Default, Debug)]
@@ -76,7 +75,12 @@ pub async fn get_login(
     Extension(template_engine): Extension<TemplateEngine>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Response {
-    render_login_page(&template_engine, next, LoginForm::default(), FormErrors::default())
+    render_login_page(
+        &template_engine,
+        next,
+        LoginForm::default(),
+        FormErrors::default(),
+    )
 }
 
 pub async fn post_login(
@@ -94,11 +98,15 @@ pub async fn post_login(
         Ok(None) => {
             errors.insert("password", "Invalid email or password");
             return render_login_page(&template_engine, next, form, errors);
-        },
+        }
         Err(e) => {
             tracing::error!("Failed to authenticate user: {:?}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to authenticate user").into_response();
-        },
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to authenticate user",
+            )
+                .into_response();
+        }
     };
 
     if auth_session.login(&user).await.is_err() {
@@ -108,7 +116,7 @@ pub async fn post_login(
     if let Some(next) = next {
         return Redirect::to(&next).into_response();
     }
-    
+
     Redirect::to("/").into_response()
 }
 
@@ -118,6 +126,6 @@ pub async fn get_logout(mut auth_session: auth::layer::AuthSession) -> Response 
         Err(e) => {
             tracing::error!("Failed to logout: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to logout").into_response()
-        },
+        }
     }
 }

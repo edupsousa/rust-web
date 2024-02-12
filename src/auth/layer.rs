@@ -8,85 +8,87 @@ use super::{password, session::DatabaseSessionStore};
 
 #[derive(Debug, Clone)]
 pub struct User {
-  id: i32,
-  pw_hash: Vec<u8>,
+    id: i32,
+    pw_hash: Vec<u8>,
 }
 
 impl AuthUser for User {
-  type Id = i32;
+    type Id = i32;
 
-  fn id(&self) -> Self::Id {
-      self.id
-  }
+    fn id(&self) -> Self::Id {
+        self.id
+    }
 
-  fn session_auth_hash(&self) -> &[u8] {
-      &self.pw_hash
-  }
+    fn session_auth_hash(&self) -> &[u8] {
+        &self.pw_hash
+    }
 }
 
 #[derive(Clone)]
 pub struct Backend {
-  db: DatabaseConnection,
+    db: DatabaseConnection,
 }
 
 impl Backend {
-  pub fn new(db: DatabaseConnection) -> Self {
-      Self { db }
-  }
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
+    }
 }
 
 pub struct Credentials {
-  pub email: String,
-  pub password: String,
+    pub email: String,
+    pub password: String,
 }
 
 #[async_trait]
 impl AuthnBackend for Backend {
-  type User = User;
-  type Credentials = Credentials;
-  type Error = std::convert::Infallible;
+    type User = User;
+    type Credentials = Credentials;
+    type Error = std::convert::Infallible;
 
-  async fn authenticate(
-      &self,
-      credentials: Self::Credentials,
-  ) -> Result<Option<Self::User>, Self::Error> {
-      let user = user::Entity::find()
-          .filter(user::Column::Email.contains(&credentials.email))
-          .one(&self.db)
-          .await
-          .ok()
-          .flatten()
-          .filter(|user| password::verify(&credentials.password, &user.password));
+    async fn authenticate(
+        &self,
+        credentials: Self::Credentials,
+    ) -> Result<Option<Self::User>, Self::Error> {
+        let user = user::Entity::find()
+            .filter(user::Column::Email.contains(&credentials.email))
+            .one(&self.db)
+            .await
+            .ok()
+            .flatten()
+            .filter(|user| password::verify(&credentials.password, &user.password));
 
-      let user = user.map(|user| User {
-          id: user.id,
-          pw_hash: user.password.as_bytes().to_vec(),
-      });
+        let user = user.map(|user| User {
+            id: user.id,
+            pw_hash: user.password.as_bytes().to_vec(),
+        });
 
-      Ok(user)
-  }
+        Ok(user)
+    }
 
-  async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-      let user = user::Entity::find_by_id(*user_id).one(&self.db).await;
+    async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
+        let user = user::Entity::find_by_id(*user_id).one(&self.db).await;
 
-      match user {
-          Ok(Some(user)) => Ok(Some(User {
-              id: user.id,
-              pw_hash: user.password.as_bytes().to_vec(),
-          })),
-          _ => Ok(None),
-      }
-  }
+        match user {
+            Ok(Some(user)) => Ok(Some(User {
+                id: user.id,
+                pw_hash: user.password.as_bytes().to_vec(),
+            })),
+            _ => Ok(None),
+        }
+    }
 }
 
 pub type AuthSession = axum_login::AuthSession<Backend>;
 
-pub fn create_auth_layer(db: DatabaseConnection) -> AuthManagerLayer<Backend, DatabaseSessionStore> {
-  let session_store = DatabaseSessionStore::new(db.clone());
-  let session_layer = SessionManagerLayer::new(session_store)
-      .with_secure(false)
-      .with_expiry(Expiry::OnInactivity(Duration::minutes(30)));
-  let backend = Backend::new(db);
-  
-  AuthManagerLayerBuilder::new(backend, session_layer).build()
+pub fn create_auth_layer(
+    db: DatabaseConnection,
+) -> AuthManagerLayer<Backend, DatabaseSessionStore> {
+    let session_store = DatabaseSessionStore::new(db.clone());
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::minutes(30)));
+    let backend = Backend::new(db);
+
+    AuthManagerLayerBuilder::new(backend, session_layer).build()
 }

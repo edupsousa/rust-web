@@ -1,7 +1,7 @@
-mod templates;
-mod database;
-mod auth;
 mod app;
+mod auth;
+mod database;
+mod templates;
 
 #[tokio::main]
 async fn main() {
