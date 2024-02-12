@@ -16,9 +16,11 @@ pub fn create_app(
     let auth_router = crate::auth::router::router();
 
     Router::new()
-        .route("/", get(get_root))
+        .route("/protected", get(get_protected))
         .route_layer(login_required!(auth::layer::Backend, login_url = "/login"))
         .merge(auth_router)
+        .route("/public", get(get_public))
+        .route("/", get(get_root))
         .layer(Extension(template_engine))
         .layer(Extension(database_connection))
         .layer(auth_layer)
@@ -27,4 +29,12 @@ pub fn create_app(
 
 pub async fn get_root(Extension(template_engine): Extension<TemplateEngine>) -> Response {
     render_response(&template_engine, "index", &())
+}
+
+pub async fn get_protected() -> &'static str {
+    "Protected"
+}
+
+pub async fn get_public() -> &'static str {
+    "Public"
 }

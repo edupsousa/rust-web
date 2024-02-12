@@ -111,3 +111,13 @@ pub async fn post_login(
     
     Redirect::to("/").into_response()
 }
+
+pub async fn get_logout(mut auth_session: auth::layer::AuthSession) -> Response {
+    match auth_session.logout().await {
+        Ok(_) => Redirect::to("/login").into_response(),
+        Err(e) => {
+            tracing::error!("Failed to logout: {:?}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to logout").into_response()
+        },
+    }
+}
