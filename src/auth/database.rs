@@ -3,6 +3,8 @@ use entity::user;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use thiserror::Error;
 
+pub type UserModel = user::Model;
+
 pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
     user::Entity::find()
         .filter(user::Column::Email.eq(email))
@@ -11,6 +13,19 @@ pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
         .ok()
         .flatten()
         .is_some()
+}
+
+pub async fn get_user_by_email(db: &DatabaseConnection, email: &str) -> Option<UserModel> {
+    user::Entity::find()
+        .filter(user::Column::Email.eq(email))
+        .one(db)
+        .await
+        .ok()
+        .flatten()
+}
+
+pub async fn get_user_by_id(db: &DatabaseConnection, id: i32) -> Option<UserModel> {
+    user::Entity::find_by_id(id).one(db).await.ok().flatten()
 }
 
 #[derive(Error, Debug)]

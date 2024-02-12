@@ -1,10 +1,9 @@
 use async_trait::async_trait;
 use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder, AuthUser, AuthnBackend, UserId};
-use entity::user;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::DatabaseConnection;
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
 
-use super::{password, session::DatabaseSessionStore};
+use super::{database, password, session::DatabaseSessionStore};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -21,6 +20,15 @@ impl AuthUser for User {
 
     fn session_auth_hash(&self) -> &[u8] {
         &self.pw_hash
+    }
+}
+
+impl From<database::UserModel> for User {
+    fn from(user: database::UserModel) -> Self {
+        Self {
+            id: user.id,
+            pw_hash: user.password.as_bytes().to_vec(),
+        }
     }
 }
 
@@ -50,32 +58,20 @@ impl AuthnBackend for Backend {
         &self,
         credentials: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
-        let user = user::Entity::find()
-            .filter(user::Column::Email.contains(&credentials.email))
-            .one(&self.db)
+        let user = database::get_user_by_email(&self.db, &credentials.email)
             .await
-            .ok()
-            .flatten()
-            .filter(|user| password::verify(&credentials.password, &user.password));
-
-        let user = user.map(|user| User {
-            id: user.id,
-            pw_hash: user.password.as_bytes().to_vec(),
-        });
+            .filter(|user| password::verify(&credentials.password, &user.password))
+            .map(User::from);
 
         Ok(user)
     }
 
     async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-        let user = user::Entity::find_by_id(*user_id).one(&self.db).await;
+        let user = database::get_user_by_id(&self.db, *user_id)
+            .await
+            .map(User::from);
 
-        match user {
-            Ok(Some(user)) => Ok(Some(User {
-                id: user.id,
-                pw_hash: user.password.as_bytes().to_vec(),
-            })),
-            _ => Ok(None),
-        }
+        Ok(user)
     }
 }
 
