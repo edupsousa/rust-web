@@ -12,7 +12,7 @@ async fn main() {
     dotenvy::dotenv().unwrap();
 
     let database_connection = database::connect().await;
-    let template_engine = templates::create_engine();
+    let template_engine = templates::TemplateEngine::build().unwrap();
     let app = app::create_app(template_engine, database_connection);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

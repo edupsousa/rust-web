@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use super::db_user;
-use crate::templates::{render_response, TemplateEngine};
+use crate::app::AppState;
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
-    Extension, Form,
+    Form,
 };
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default, Debug)]
@@ -58,25 +58,21 @@ pub struct RegisterPageData {
     errors: FormErrors,
 }
 
-pub async fn get_register(Extension(template_engine): Extension<TemplateEngine>) -> Response {
-    render_response(
-        &template_engine,
-        "user/register",
-        &RegisterPageData::default(),
-    )
+pub async fn get_register(State(app): State<AppState>) -> Response {
+    app.template_engine
+        .render_response("user/register", &RegisterPageData::default())
 }
 
 pub async fn post_register(
-    Extension(template_engine): Extension<TemplateEngine>,
-    Extension(db): Extension<DatabaseConnection>,
+    State(app): State<AppState>,
     Form(form): Form<RegisterForm>,
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if errors.is_empty() {
-        if db_user::user_exists(&db, &form.email).await {
+        if db_user::user_exists(&app.database_connection, &form.email).await {
             errors.insert("email", "Email is already registered");
         } else {
-            match db_user::create_user(&db, form.into()).await {
+            match db_user::create_user(&app.database_connection, form.into()).await {
                 Ok(_) => {
                     return Redirect::to("/login?registered=true").into_response();
                 }
@@ -89,5 +85,5 @@ pub async fn post_register(
         }
     }
     let data = RegisterPageData { form, errors };
-    render_response(&template_engine, "user/register", &data)
+    app.template_engine.render_response("user/register", &data)
 }

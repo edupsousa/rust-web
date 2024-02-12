@@ -3,7 +3,7 @@ use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder, AuthUser, AuthnBacke
 use sea_orm::DatabaseConnection;
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
 
-use super::{db_user, password, db_session_store::DatabaseSessionStore};
+use super::{db_session_store::DatabaseSessionStore, db_user, password};
 
 #[derive(Debug, Clone)]
 pub struct User {

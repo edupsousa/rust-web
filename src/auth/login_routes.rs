@@ -1,10 +1,11 @@
+use crate::app::AppState;
 use crate::auth;
-use crate::templates::{render_response, TemplateEngine};
-use axum::extract::Query;
+use crate::templates::TemplateEngine;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{
     response::{IntoResponse, Redirect, Response},
-    Extension, Form,
+    Form,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -68,15 +69,15 @@ pub fn render_login_page(
         form,
         errors,
     };
-    render_response(template_engine, "user/login", &data)
+    template_engine.render_response("user/login", &data)
 }
 
 pub async fn get_login(
-    Extension(template_engine): Extension<TemplateEngine>,
+    State(app): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Response {
     render_login_page(
-        &template_engine,
+        &app.template_engine,
         next,
         LoginForm::default(),
         FormErrors::default(),
@@ -85,19 +86,19 @@ pub async fn get_login(
 
 pub async fn post_login(
     mut auth_session: auth::layer::AuthSession,
-    Extension(template_engine): Extension<TemplateEngine>,
+    State(app): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if !errors.is_empty() {
-        return render_login_page(&template_engine, next, form, errors);
+        return render_login_page(&app.template_engine, next, form, errors);
     }
     let user = match auth_session.authenticate(form.clone().into()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             errors.insert("password", "Invalid email or password");
-            return render_login_page(&template_engine, next, form, errors);
+            return render_login_page(&app.template_engine, next, form, errors);
         }
         Err(e) => {
             tracing::error!("Failed to authenticate user: {:?}", e);

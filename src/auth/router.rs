@@ -1,3 +1,5 @@
+use crate::app::AppState;
+
 use super::{
     login_routes::{get_login, get_logout, post_login},
     register_routes::{get_register, post_register},
@@ -7,7 +9,7 @@ use axum::{
     Router,
 };
 
-pub fn router() -> Router {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(get_login))
         .route("/login", post(post_login))
