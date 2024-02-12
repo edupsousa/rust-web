@@ -1,12 +1,10 @@
-use argon2::{
-  password_hash::{PasswordHash, PasswordVerifier},
-  Argon2,
-};
 use async_trait::async_trait;
 use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder, AuthUser, AuthnBackend, UserId};
 use entity::user;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
+
+use super::password;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -58,7 +56,7 @@ impl AuthnBackend for Backend {
           .await
           .ok()
           .flatten()
-          .filter(|user| verify_password(&credentials.password, &user.password));
+          .filter(|user| password::verify(&credentials.password, &user.password));
 
       let user = user.map(|user| User {
           id: user.id,
@@ -79,14 +77,6 @@ impl AuthnBackend for Backend {
           _ => Ok(None),
       }
   }
-}
-
-fn verify_password(password: &str, hash: &str) -> bool {
-  let argon2 = Argon2::default();
-  let password_hash = PasswordHash::new(hash).unwrap();
-  argon2
-      .verify_password(password.as_bytes(), &password_hash)
-      .is_ok()
 }
 
 pub type AuthSession = axum_login::AuthSession<Backend>;
