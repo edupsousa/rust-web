@@ -4,7 +4,7 @@ use entity::user;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
 
-use super::password;
+use super::{password, session::DatabaseSessionStore};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -81,8 +81,8 @@ impl AuthnBackend for Backend {
 
 pub type AuthSession = axum_login::AuthSession<Backend>;
 
-pub fn create_auth_layer(db: DatabaseConnection) -> AuthManagerLayer<Backend, tower_sessions::MemoryStore> {
-  let session_store = tower_sessions::MemoryStore::default();
+pub fn create_auth_layer(db: DatabaseConnection) -> AuthManagerLayer<Backend, DatabaseSessionStore> {
+  let session_store = DatabaseSessionStore::new(db.clone());
   let session_layer = SessionManagerLayer::new(session_store)
       .with_secure(false)
       .with_expiry(Expiry::OnInactivity(Duration::minutes(30)));

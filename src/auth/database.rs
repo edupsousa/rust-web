@@ -1,7 +1,6 @@
 use entity::user;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use thiserror::Error;
-
 use super::password;
 
 pub async fn user_exists(db: &DatabaseConnection, email: &str) -> bool {
