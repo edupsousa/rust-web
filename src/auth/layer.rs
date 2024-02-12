@@ -3,7 +3,7 @@ use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder, AuthUser, AuthnBacke
 use sea_orm::DatabaseConnection;
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
 
-use super::{database, password, session::DatabaseSessionStore};
+use super::{db_user, password, db_session_store::DatabaseSessionStore};
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -23,8 +23,8 @@ impl AuthUser for User {
     }
 }
 
-impl From<database::UserModel> for User {
-    fn from(user: database::UserModel) -> Self {
+impl From<db_user::UserModel> for User {
+    fn from(user: db_user::UserModel) -> Self {
         Self {
             id: user.id,
             pw_hash: user.password.as_bytes().to_vec(),
@@ -58,7 +58,7 @@ impl AuthnBackend for Backend {
         &self,
         credentials: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
-        let user = database::get_user_by_email(&self.db, &credentials.email)
+        let user = db_user::get_user_by_email(&self.db, &credentials.email)
             .await
             .filter(|user| password::verify(&credentials.password, &user.password))
             .map(User::from);
@@ -67,7 +67,7 @@ impl AuthnBackend for Backend {
     }
 
     async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-        let user = database::get_user_by_id(&self.db, *user_id)
+        let user = db_user::get_user_by_id(&self.db, *user_id)
             .await
             .map(User::from);
 

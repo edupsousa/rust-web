@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::database;
+use super::db_user;
 use crate::templates::{render_response, TemplateEngine};
 use axum::{
     http::StatusCode,
@@ -43,9 +43,9 @@ impl RegisterForm {
     }
 }
 
-impl From<RegisterForm> for database::CreateUserData {
+impl From<RegisterForm> for db_user::CreateUserData {
     fn from(form: RegisterForm) -> Self {
-        database::CreateUserData {
+        db_user::CreateUserData {
             email: form.email,
             password: form.password,
         }
@@ -73,10 +73,10 @@ pub async fn post_register(
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if errors.is_empty() {
-        if database::user_exists(&db, &form.email).await {
+        if db_user::user_exists(&db, &form.email).await {
             errors.insert("email", "Email is already registered");
         } else {
-            match database::create_user(&db, form.into()).await {
+            match db_user::create_user(&db, form.into()).await {
                 Ok(_) => {
                     return Redirect::to("/login?registered=true").into_response();
                 }
