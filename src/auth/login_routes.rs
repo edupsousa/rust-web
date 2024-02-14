@@ -1,5 +1,6 @@
 use crate::app::AppState;
 use crate::auth;
+use crate::layout::page::PageTemplateData;
 use crate::templates::{render_to_response, TemplateEngine};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -10,6 +11,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use validator::validate_email;
+
+use super::layer::AuthSession;
 
 #[derive(Deserialize, Serialize, Default, Debug, Clone)]
 pub struct LoginForm {
@@ -60,24 +63,30 @@ pub struct NextUrl {
 
 pub fn render_login_page(
     template_engine: &TemplateEngine,
+    is_signed_in: bool,
     next: Option<String>,
     form: LoginForm,
     errors: FormErrors,
 ) -> Response {
-    let data = LoginPageData {
-        next_url: next,
-        form,
-        errors,
-    };
-    render_to_response(template_engine, "auth/login", &data)
+    let page_data = PageTemplateData::new(
+        is_signed_in,
+        LoginPageData {
+            next_url: next,
+            form,
+            errors,
+        },
+    );
+    render_to_response(template_engine, "auth/login", &page_data)
 }
 
 pub async fn get_login(
     State(app): State<AppState>,
+    auth_session: AuthSession,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Response {
     render_login_page(
         &app.template_engine,
+        auth_session.user.is_some(),
         next,
         LoginForm::default(),
         FormErrors::default(),
@@ -92,13 +101,25 @@ pub async fn post_login(
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
     if !errors.is_empty() {
-        return render_login_page(&app.template_engine, next, form, errors);
+        return render_login_page(
+            &app.template_engine,
+            auth_session.user.is_some(),
+            next,
+            form,
+            errors,
+        );
     }
     let user = match auth_session.authenticate(form.clone().into()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             errors.insert("password", "Invalid email or password");
-            return render_login_page(&app.template_engine, next, form, errors);
+            return render_login_page(
+                &app.template_engine,
+                auth_session.user.is_some(),
+                next,
+                form,
+                errors,
+            );
         }
         Err(e) => {
             tracing::error!("Failed to authenticate user: {:?}", e);

@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
-use super::db_user;
-use crate::{app::AppState, templates::render_to_response};
+use super::{db_user, layer::AuthSession};
+use crate::{
+    app::AppState,
+    layout::page::PageTemplateData,
+    templates::{render_to_response, TemplateEngine},
+};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -58,16 +62,17 @@ pub struct RegisterPageData {
     errors: FormErrors,
 }
 
-pub async fn get_register(State(app): State<AppState>) -> Response {
-    render_to_response(
+pub async fn get_register(State(app): State<AppState>, auth_session: AuthSession) -> Response {
+    render_register_page(
         &app.template_engine,
-        "auth/register",
-        &RegisterPageData::default(),
+        auth_session.user.is_some(),
+        RegisterPageData::default(),
     )
 }
 
 pub async fn post_register(
     State(app): State<AppState>,
+    auth_session: AuthSession,
     Form(form): Form<RegisterForm>,
 ) -> Response {
     let mut errors: FormErrors = form.get_errors();
@@ -87,6 +92,19 @@ pub async fn post_register(
             }
         }
     }
-    let data = RegisterPageData { form, errors };
-    render_to_response(&app.template_engine, "auth/register", &data)
+
+    render_register_page(
+        &app.template_engine,
+        auth_session.user.is_some(),
+        RegisterPageData { form, errors },
+    )
+}
+
+fn render_register_page(
+    template_engine: &TemplateEngine,
+    is_signed_in: bool,
+    data: RegisterPageData,
+) -> Response {
+    let page_data = PageTemplateData::new(is_signed_in, data);
+    render_to_response(template_engine, "auth/register", &page_data)
 }

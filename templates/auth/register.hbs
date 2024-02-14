@@ -1,6 +1,7 @@
 {{> layout/page_header }}
 <body>
   {{#with navbar}}{{> layout/navbar }}{{/with}}
+  {{#with content}}
   <div class="container">
     <h1 class="title">Register</h1>
     <form class="form" action="/register" method="post">
@@ -41,5 +42,6 @@
       </div>
     </form>
   </div>
+  {{/with}}
 </body>
 {{> layout/page_footer }}
