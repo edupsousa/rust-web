@@ -13,7 +13,7 @@ use crate::{
     templates::{render_to_response, TemplateEngine},
 };
 
-use super::db_user_profile;
+use super::db_user_profile::{self, get_user_profile, GetUserProfileResult};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct ProfileForm {
@@ -45,10 +45,20 @@ impl ProfileForm {
     }
 }
 
-pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSession) -> Response {
-    let _user = auth_session.user.unwrap();
+impl From<GetUserProfileResult> for ProfileForm {
+    fn from(profile: GetUserProfileResult) -> Self {
+        ProfileForm {
+            display_name: profile.display_name,
+        }
+    }
+}
 
-    let form = ProfileForm::default(); // TODO: Load from user profile
+pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSession) -> Response {
+    let user = auth_session.user.unwrap();
+    let form = match get_user_profile(&app.database_connection, user.id()).await {
+        Some(profile) => profile.into(),
+        None => ProfileForm::default(),
+    };
 
     render_profile_page(
         &app.template_engine,
