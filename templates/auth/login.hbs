@@ -1,5 +1,6 @@
-{{> base_head}}
+{{> layout/page_header }}
 <body>
+  {{#with navbar}}{{> layout/navbar }}{{/with}}
   <div class="container">
     <h1 class="title">Login</h1>
     <form class="form" action="/login{{#if next_url }}?next={{next_url}}{{/if}}" method="post">
@@ -31,4 +32,4 @@
     </form>
   </div>
 </body>
-{{> base_footer}}
+{{> layout/page_footer }}

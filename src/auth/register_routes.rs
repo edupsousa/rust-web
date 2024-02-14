@@ -61,7 +61,7 @@ pub struct RegisterPageData {
 pub async fn get_register(State(app): State<AppState>) -> Response {
     render_to_response(
         &app.template_engine,
-        "user/register",
+        "auth/register",
         &RegisterPageData::default(),
     )
 }
@@ -88,5 +88,5 @@ pub async fn post_register(
         }
     }
     let data = RegisterPageData { form, errors };
-    render_to_response(&app.template_engine, "user/register", &data)
+    render_to_response(&app.template_engine, "auth/register", &data)
 }

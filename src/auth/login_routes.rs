@@ -69,7 +69,7 @@ pub fn render_login_page(
         form,
         errors,
     };
-    render_to_response(template_engine, "user/login", &data)
+    render_to_response(template_engine, "auth/login", &data)
 }
 
 pub async fn get_login(
