@@ -5,7 +5,10 @@ use serde::Serialize;
 use tower_http::trace::TraceLayer;
 
 use crate::{
-    auth::{self, layer::AuthSession}, layout::navbar::NavbarTemplateData, templates::{render_to_response, TemplateEngine}
+    auth::{self, layer::AuthSession},
+    layout::navbar::NavbarTemplateData,
+    templates::{render_to_response, TemplateEngine},
+    user,
 };
 
 #[derive(Clone)]
@@ -19,7 +22,8 @@ pub fn create_app(
     database_connection: DatabaseConnection,
 ) -> Router {
     let auth_layer = auth::layer::create_auth_layer(database_connection.clone());
-    let auth_router = crate::auth::router::router();
+    let auth_router = auth::router::router();
+    let user_router = user::router::router();
 
     let app_state = AppState {
         template_engine,
@@ -28,6 +32,7 @@ pub fn create_app(
 
     Router::new()
         .route("/protected", get(get_protected))
+        .merge(user_router)
         .route_layer(login_required!(auth::layer::Backend, login_url = "/login"))
         .merge(auth_router)
         .route("/public", get(get_public))

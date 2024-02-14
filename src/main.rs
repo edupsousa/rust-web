@@ -1,8 +1,9 @@
 mod app;
 mod auth;
 mod database;
-mod templates;
 mod layout;
+mod templates;
+mod user;
 
 #[tokio::main]
 async fn main() {
