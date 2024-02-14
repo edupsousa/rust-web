@@ -2,6 +2,7 @@ mod app;
 mod auth;
 mod database;
 mod templates;
+mod layout;
 
 #[tokio::main]
 async fn main() {
