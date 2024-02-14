@@ -1,9 +1,10 @@
 use axum::{extract::State, response::Response, routing::get, Router};
 use axum_login::login_required;
 use sea_orm::DatabaseConnection;
+use serde::Serialize;
 use tower_http::trace::TraceLayer;
 
-use crate::{auth, templates::TemplateEngine};
+use crate::{auth::{self, layer::AuthSession}, templates::TemplateEngine};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,8 +35,32 @@ pub fn create_app(
         .with_state(app_state)
 }
 
-pub async fn get_root(State(app): State<AppState>) -> Response {
-    app.template_engine.render_response("index", &())
+#[derive(Serialize)]
+struct IndexTemplate {
+    navbar: NavbarTemplate,
+}
+
+#[derive(Serialize)]
+struct NavbarTemplate {
+    login_visible: bool,
+    signup_visible: bool,
+    logout_visible: bool,
+    private_visible: bool,
+}
+
+pub async fn get_root(
+    State(app): State<AppState>,
+    auth_session: AuthSession,
+) -> Response {
+    let is_signed_in = auth_session.user.is_some();
+    let navbar = NavbarTemplate {
+        login_visible: !is_signed_in,
+        signup_visible: !is_signed_in,
+        logout_visible: is_signed_in,
+        private_visible: is_signed_in,
+    };
+    let index = IndexTemplate { navbar };
+    app.template_engine.render_response("index", &index)
 }
 
 pub async fn get_protected() -> &'static str {

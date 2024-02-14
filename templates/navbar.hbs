@@ -10,24 +10,31 @@
       <a class="navbar-item" href="/public">
         Public
       </a>
-
+      {{#if private_visible}}
       <a class="navbar-item" href="/protected">
         Protected
       </a>
+      {{/if}}
     </div>
 
     <div class="navbar-end">
       <div class="navbar-item">
         <div class="buttons">
+          {{#if signup_visible}}
           <a class="button is-primary" href="/register">
             <strong>Sign up</strong>
           </a>
+          {{/if}}
+          {{#if login_visible}}
           <a class="button is-light" href="/login">
             Log in
           </a>
+          {{/if}}
+          {{#if logout_visible}}
           <a class="button is-light" href="/logout">
             Log out
           </a>
+          {{/if}}
         </div>
       </div>
     </div>
