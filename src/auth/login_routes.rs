@@ -1,6 +1,6 @@
 use crate::app::AppState;
 use crate::auth;
-use crate::templates::TemplateEngine;
+use crate::templates::{render_to_response, TemplateEngine};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{
@@ -69,7 +69,7 @@ pub fn render_login_page(
         form,
         errors,
     };
-    template_engine.render_response("user/login", &data)
+    render_to_response(template_engine, "user/login", &data)
 }
 
 pub async fn get_login(

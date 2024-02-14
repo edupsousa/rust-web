@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::db_user;
-use crate::app::AppState;
+use crate::{app::AppState, templates::render_to_response};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -59,8 +59,11 @@ pub struct RegisterPageData {
 }
 
 pub async fn get_register(State(app): State<AppState>) -> Response {
-    app.template_engine
-        .render_response("user/register", &RegisterPageData::default())
+    render_to_response(
+        &app.template_engine,
+        "user/register",
+        &RegisterPageData::default(),
+    )
 }
 
 pub async fn post_register(
@@ -85,5 +88,5 @@ pub async fn post_register(
         }
     }
     let data = RegisterPageData { form, errors };
-    app.template_engine.render_response("user/register", &data)
+    render_to_response(&app.template_engine, "user/register", &data)
 }

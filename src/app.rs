@@ -4,7 +4,10 @@ use sea_orm::DatabaseConnection;
 use serde::Serialize;
 use tower_http::trace::TraceLayer;
 
-use crate::{auth::{self, layer::AuthSession}, templates::TemplateEngine};
+use crate::{
+    auth::{self, layer::AuthSession},
+    templates::{render_to_response, TemplateEngine},
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -48,10 +51,7 @@ struct NavbarTemplate {
     private_visible: bool,
 }
 
-pub async fn get_root(
-    State(app): State<AppState>,
-    auth_session: AuthSession,
-) -> Response {
+pub async fn get_root(State(app): State<AppState>, auth_session: AuthSession) -> Response {
     let is_signed_in = auth_session.user.is_some();
     let navbar = NavbarTemplate {
         login_visible: !is_signed_in,
@@ -60,7 +60,7 @@ pub async fn get_root(
         private_visible: is_signed_in,
     };
     let index = IndexTemplate { navbar };
-    app.template_engine.render_response("index", &index)
+    render_to_response(&app.template_engine, "index", &index)
 }
 
 pub async fn get_protected() -> &'static str {
