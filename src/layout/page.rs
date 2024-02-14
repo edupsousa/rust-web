@@ -4,7 +4,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct Message {
-    level: String,
+    class: String,
     text: String,
 }
 
@@ -18,13 +18,13 @@ where
     messages: Vec<Message>,
 }
 
-fn get_level_value(level: &Level) -> String {
+fn get_level_class(level: &Level) -> String {
     match level {
-        Level::Error => "error",
-        Level::Warning => "warning",
-        Level::Info => "info",
-        Level::Success => "success",
-        Level::Debug => "debug",
+        Level::Error => "is-danger",
+        Level::Warning => "is-warning",
+        Level::Info => "is-info",
+        Level::Success => "is-success",
+        Level::Debug => "",
     }
     .to_string()
 }
@@ -45,7 +45,7 @@ where
         let messages = messages
             .into_iter()
             .map(|message| Message {
-                level: get_level_value(&message.level),
+                class: get_level_class(&message.level),
                 text: message.message,
             })
             .collect::<Vec<_>>();
