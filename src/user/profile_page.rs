@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::State, http::StatusCode, response::{IntoResponse, Redirect, Response}, Form
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Redirect, Response},
+    Form,
 };
 use axum_login::AuthUser;
+use axum_messages::Messages;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -28,8 +32,12 @@ pub struct ProfilePage {
     errors: FormErrors,
 }
 
-fn render_profile_page(template_engine: &TemplateEngine, data: ProfilePage) -> Response {
-    let page_data = PageTemplateData::new(true, data);
+fn render_profile_page(
+    template_engine: &TemplateEngine,
+    data: ProfilePage,
+    messages: Messages,
+) -> Response {
+    let page_data = PageTemplateData::new_with_messages(true, data, messages);
     render_to_response(template_engine, "user/profile", &page_data)
 }
 
@@ -53,7 +61,11 @@ impl From<GetUserProfileResult> for ProfileForm {
     }
 }
 
-pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSession) -> Response {
+pub async fn get_profile_page(
+    State(app): State<AppState>,
+    auth_session: AuthSession,
+    messages: Messages,
+) -> Response {
     let user = auth_session.user.unwrap();
     let form = match get_user_profile(&app.database_connection, user.id()).await {
         Some(profile) => profile.into(),
@@ -66,6 +78,7 @@ pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSes
             form,
             errors: FormErrors::default(),
         },
+        messages,
     )
 }
 
@@ -80,6 +93,7 @@ impl From<ProfileForm> for db_user_profile::SaveUserProfileData {
 pub async fn post_profile_page(
     State(app): State<AppState>,
     auth_session: AuthSession,
+    messages: Messages,
     Form(form): Form<ProfileForm>,
 ) -> Response {
     let user = auth_session.user.unwrap();
@@ -88,18 +102,25 @@ pub async fn post_profile_page(
     let errors = form.get_errors();
 
     if errors.is_empty() {
-        match db_user_profile::save_user_profile(&app.database_connection, user_id, form.into()).await {
+        match db_user_profile::save_user_profile(&app.database_connection, user_id, form.into())
+            .await
+        {
             Ok(()) => {
-                return Redirect::to("/profile").into_response();
+                messages.success("Profile updated");
+                return Redirect::to("/user/profile").into_response();
             }
             Err(e) => {
                 tracing::error!("Failed to save user profile: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to save user profile").into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to save user profile",
+                )
+                    .into_response();
             }
         }
     }
 
     let data = ProfilePage { form, errors };
 
-    render_profile_page(&app.template_engine, data)
+    render_profile_page(&app.template_engine, data, messages)
 }

@@ -9,7 +9,7 @@
       <div class="field">
         <label class="label">Display Name</label>
         <div class="control">
-          <input class="input {{#if errors.email}}is-danger{{/if}}" type="text" placeholder="Enter your display name" name="display_name" id="display_name" value="{{form.display_name}}">
+          <input class="input {{#if errors.display_name}}is-danger{{/if}}" type="text" placeholder="Enter your display name" name="display_name" id="display_name" value="{{form.display_name}}">
         </div>
         {{#if errors.display_name}}
         <p class="help is-danger">{{errors.display_name}}</p>
@@ -24,5 +24,6 @@
     </form>
   </div>
   {{/with}}
+  {{> layout/messages }}
 </body>
 {{> layout/page_footer }}

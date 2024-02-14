@@ -1,5 +1,6 @@
 use axum::{extract::State, response::Response, routing::get, Router};
 use axum_login::login_required;
+use axum_messages::MessagesManagerLayer;
 use sea_orm::DatabaseConnection;
 use serde::Serialize;
 use tower_http::trace::TraceLayer;
@@ -37,6 +38,7 @@ pub fn create_app(
         .merge(auth_router)
         .route("/public", get(get_public))
         .route("/", get(get_root))
+        .layer(MessagesManagerLayer)
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
         .with_state(app_state)
