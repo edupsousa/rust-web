@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use super::{db_user, layer::AuthSession};
-use crate::{
-    app::AppState,
-    layout::page::PageTemplateData,
-    templates::{render_to_response, TemplateEngine},
-};
+use crate::{app::AppState, layout::page::PageTemplateData, templates::TemplateEngine};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -105,6 +101,5 @@ fn render_register_page(
     is_signed_in: bool,
     data: RegisterPageData,
 ) -> Response {
-    let page_data = PageTemplateData::new(is_signed_in, data);
-    render_to_response(template_engine, "auth/register", &page_data)
+    PageTemplateData::new("auth/register", is_signed_in, data).render(template_engine)
 }

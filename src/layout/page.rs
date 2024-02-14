@@ -1,4 +1,7 @@
+use crate::templates::{render_to_response, TemplateEngine};
+
 use super::navbar::NavbarTemplateData;
+use axum::response::Response;
 use axum_messages::{Level, Messages};
 use serde::Serialize;
 
@@ -16,6 +19,7 @@ where
     navbar: NavbarTemplateData,
     content: T,
     messages: Vec<Message>,
+    content_template: &'static str,
 }
 
 fn get_level_class(level: &Level) -> String {
@@ -33,15 +37,16 @@ impl<T> PageTemplateData<T>
 where
     T: Serialize,
 {
-    pub fn new(is_signed_in: bool, content: T) -> Self {
+    pub fn new(content_template: &'static str, is_signed_in: bool, content: T) -> Self {
         Self {
             navbar: NavbarTemplateData::new(is_signed_in),
             content,
             messages: vec![],
+            content_template,
         }
     }
 
-    pub fn new_with_messages(is_signed_in: bool, content: T, messages: Messages) -> Self {
+    pub fn new_with_messages(content_template: &'static str, is_signed_in: bool, content: T, messages: Messages) -> Self {
         let messages = messages
             .into_iter()
             .map(|message| Message {
@@ -54,6 +59,11 @@ where
             navbar: NavbarTemplateData::new(is_signed_in),
             content,
             messages,
+            content_template,
         }
+    }
+
+    pub fn render(&self, template_engine: &TemplateEngine) -> Response {
+        render_to_response(template_engine, "layout/page", self)
     }
 }

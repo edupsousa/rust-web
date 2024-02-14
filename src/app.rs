@@ -7,8 +7,8 @@ use tower_http::trace::TraceLayer;
 
 use crate::{
     auth::{self, layer::AuthSession},
-    layout::navbar::NavbarTemplateData,
-    templates::{render_to_response, TemplateEngine},
+    layout::{navbar::NavbarTemplateData, page::PageTemplateData},
+    templates::TemplateEngine,
     user,
 };
 
@@ -50,9 +50,7 @@ struct IndexTemplate {
 }
 
 pub async fn get_root(State(app): State<AppState>, auth_session: AuthSession) -> Response {
-    let navbar = NavbarTemplateData::new(auth_session.user.is_some());
-    let index = IndexTemplate { navbar };
-    render_to_response(&app.template_engine, "index", &index)
+    PageTemplateData::new("index", auth_session.user.is_some(), &()).render(&app.template_engine)
 }
 
 pub async fn get_protected() -> &'static str {
