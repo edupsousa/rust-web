@@ -1,5 +1,6 @@
 use crate::app::AppState;
 use crate::auth;
+use crate::layout::messages::PageMessages;
 use crate::layout::page_template::PageTemplate;
 use crate::templates::TemplateEngine;
 use axum::extract::{Query, State};
@@ -9,35 +10,16 @@ use axum::{
     Form,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use validator::validate_email;
+use validator::{Validate, ValidationErrors};
 
 use super::layer::AuthSession;
 
-#[derive(Deserialize, Serialize, Default, Debug, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, Clone, Validate)]
 pub struct LoginForm {
+    #[validate(email(message = "Invalid email address"))]
     email: String,
+    #[validate(length(min = 1, message = "Password is required"))]
     password: String,
-}
-
-type FormErrors = HashMap<&'static str, &'static str>;
-
-impl LoginForm {
-    fn get_errors(&self) -> FormErrors {
-        let mut errors = FormErrors::default();
-
-        if self.email.is_empty() {
-            errors.insert("email", "Email is required");
-        } else if !validate_email(&self.email) {
-            errors.insert("email", "Invalid email address");
-        }
-
-        if self.password.is_empty() {
-            errors.insert("password", "Password is required");
-        }
-
-        errors
-    }
 }
 
 impl From<LoginForm> for auth::layer::Credentials {
@@ -52,7 +34,7 @@ impl From<LoginForm> for auth::layer::Credentials {
 #[derive(Serialize, Default, Debug)]
 pub struct LoginPageData {
     form: LoginForm,
-    errors: FormErrors,
+    errors: ValidationErrors,
     next_url: Option<String>,
 }
 
@@ -66,7 +48,8 @@ pub fn render_login_page(
     is_signed_in: bool,
     next: Option<String>,
     form: LoginForm,
-    errors: FormErrors,
+    errors: ValidationErrors,
+    messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("auth/login")
         .content(LoginPageData {
@@ -74,6 +57,7 @@ pub fn render_login_page(
             errors,
             next_url: next,
         })
+        .maybe_messages(messages)
         .navbar(is_signed_in)
         .build()
         .render(template_engine)
@@ -89,7 +73,8 @@ pub async fn get_login(
         auth_session.user.is_some(),
         next,
         LoginForm::default(),
-        FormErrors::default(),
+        ValidationErrors::default(),
+        None,
     )
 }
 
@@ -99,26 +84,29 @@ pub async fn post_login(
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
 ) -> Response {
-    let mut errors: FormErrors = form.get_errors();
-    if !errors.is_empty() {
+    
+    if let Err(errors) = form.validate() {
         return render_login_page(
             &app.template_engine,
             auth_session.user.is_some(),
             next,
             form,
             errors,
+            None,
         );
     }
     let user = match auth_session.authenticate(form.clone().into()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
-            errors.insert("password", "Invalid email or password");
+            let mut messages = PageMessages::new();
+            messages.error("Invalid email or password");
             return render_login_page(
                 &app.template_engine,
                 auth_session.user.is_some(),
                 next,
                 form,
-                errors,
+                ValidationErrors::default(),
+                Some(messages),
             );
         }
         Err(e) => {
