@@ -7,9 +7,15 @@
       <div class="control">
         <input class="input {{#if errors.display_name}}is-danger{{/if}}" type="text" placeholder="Enter your display name" name="display_name" id="display_name" value="{{form.display_name}}">
       </div>
-      {{#if errors.display_name}}
-      <p class="help is-danger">{{errors.display_name}}</p>
-      {{/if}}
+      {{#with errors.display_name}}
+      <ul class="help is-danger">
+        {{#each this}}
+        <li>
+          {{message}}
+        </li>
+        {{/each}}
+      </ul>
+      {{/with}}
     </div>
 
     <div class="field">

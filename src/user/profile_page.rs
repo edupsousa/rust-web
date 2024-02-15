@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use axum::{
     extract::State,
     http::StatusCode,
@@ -8,25 +6,27 @@ use axum::{
 };
 use axum_login::AuthUser;
 use serde::{Deserialize, Serialize};
+use validator::{Validate, ValidationErrors};
 
 use crate::{
-    app::AppState, auth::layer::AuthSession, layout::{messages::PageMessages, page_template::PageTemplate},
+    app::AppState,
+    auth::layer::AuthSession,
+    layout::{messages::PageMessages, page_template::PageTemplate},
     templates::TemplateEngine,
 };
 
 use super::db_user_profile::{self, get_user_profile, GetUserProfileResult};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Validate)]
 pub struct ProfileForm {
+    #[validate(length(min = 1, message = "Display name is required"))]
     display_name: String,
 }
-
-type FormErrors = HashMap<&'static str, &'static str>;
 
 #[derive(Serialize, Default)]
 pub struct ProfilePage {
     form: ProfileForm,
-    errors: FormErrors,
+    errors: ValidationErrors,
 }
 
 fn render_profile_page(
@@ -42,18 +42,6 @@ fn render_profile_page(
         .render(template_engine)
 }
 
-impl ProfileForm {
-    fn get_errors(&self) -> FormErrors {
-        let mut errors = FormErrors::default();
-
-        if self.display_name.is_empty() {
-            errors.insert("display_name", "Display name is required");
-        }
-
-        errors
-    }
-}
-
 impl From<GetUserProfileResult> for ProfileForm {
     fn from(profile: GetUserProfileResult) -> Self {
         ProfileForm {
@@ -62,10 +50,7 @@ impl From<GetUserProfileResult> for ProfileForm {
     }
 }
 
-pub async fn get_profile_page(
-    State(app): State<AppState>,
-    auth_session: AuthSession,
-) -> Response {
+pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSession) -> Response {
     let user = auth_session.user.unwrap();
     let form = match get_user_profile(&app.database_connection, user.id()).await {
         Some(profile) => profile.into(),
@@ -76,7 +61,7 @@ pub async fn get_profile_page(
         &app.template_engine,
         ProfilePage {
             form,
-            errors: FormErrors::default(),
+            errors: ValidationErrors::default(),
         },
         None,
     )
@@ -99,28 +84,28 @@ pub async fn post_profile_page(
     let user = auth_session.user.unwrap();
     let user_id = user.id();
 
-    let errors = form.get_errors();
+    match form.validate() {
+        Ok(()) => {
+            match db_user_profile::save_user_profile(&app.database_connection, user_id, form.into())
+                .await
+            {
+                Ok(()) => {
+                    messages.success("Profile updated");
 
-    if errors.is_empty() {
-        match db_user_profile::save_user_profile(&app.database_connection, user_id, form.into())
-            .await
-        {
-            Ok(()) => {
-                messages.success("Profile updated");
-                return Redirect::to("/user/profile").into_response();
-            }
-            Err(e) => {
-                tracing::error!("Failed to save user profile: {:?}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to save user profile",
-                )
-                    .into_response();
+                    Redirect::to("/user/profile").into_response()
+                }
+                Err(e) => {
+                    tracing::error!("Failed to save user profile: {:?}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to save user profile",
+                    )
+                        .into_response()
+                }
             }
         }
+        Err(errors) => {
+            render_profile_page(&app.template_engine, ProfilePage { form, errors }, None)
+        }
     }
-
-    let data = ProfilePage { form, errors };
-
-    render_profile_page(&app.template_engine, data, Some(messages))
 }
