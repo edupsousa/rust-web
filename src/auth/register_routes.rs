@@ -1,12 +1,15 @@
 use super::{db_user, layer::AuthSession};
-use crate::{app::AppState, layout::page_template::PageTemplate, templates::TemplateEngine};
+use crate::{
+    app::AppState,
+    layout::{messages::PageMessages, page_template::PageTemplate},
+    templates::TemplateEngine,
+};
 use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
     Form,
 };
-use axum_messages::Messages;
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
@@ -35,25 +38,21 @@ pub struct RegisterPageData {
     errors: ValidationErrors,
 }
 
-pub async fn get_register(
-    State(app): State<AppState>,
-    auth_session: AuthSession,
-    messages: Messages,
-) -> Response {
+pub async fn get_register(State(app): State<AppState>, auth_session: AuthSession) -> Response {
     render_register_page(
         &app.template_engine,
         RegisterPageData::default(),
         auth_session.user.is_some(),
-        messages,
+        None,
     )
 }
 
 pub async fn post_register(
     State(app): State<AppState>,
     auth_session: AuthSession,
-    messages: Messages,
     Form(form): Form<RegisterForm>,
 ) -> Response {
+    let mut messages = PageMessages::new();
     let errors = form.validate().err();
     if errors.is_none() {
         let exists = db_user::user_exists(&app.database_connection, &form.email).await;
@@ -69,8 +68,7 @@ pub async fn post_register(
                 }
             }
         }
-        // TODO: How to use messages after cloning
-        // messages.error("User already exists");
+        messages.error("User already exists");
     }
 
     let errors = errors.unwrap_or_default();
@@ -79,7 +77,7 @@ pub async fn post_register(
         &app.template_engine,
         RegisterPageData { form, errors },
         auth_session.user.is_some(),
-        messages,
+        Some(messages),
     )
 }
 
@@ -87,12 +85,12 @@ fn render_register_page(
     template_engine: &TemplateEngine,
     data: RegisterPageData,
     is_signed_in: bool,
-    messages: Messages,
+    messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("auth/register")
         .content(data)
         .navbar(is_signed_in)
-        .messages(messages)
+        .maybe_messages(messages)
         .build()
         .render(template_engine)
 }

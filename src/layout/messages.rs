@@ -7,22 +7,38 @@ pub struct PageMessage {
   pub text: String,
 }
 
-impl From<axum_messages::Message> for PageMessage {
-  fn from(message: axum_messages::Message) -> Self {
-    let class = match message.level {
-      axum_messages::Level::Error => "is-danger",
-      axum_messages::Level::Warning => "is-warning",
-      axum_messages::Level::Info => "is-info",
-      axum_messages::Level::Success => "is-success",
-      axum_messages::Level::Debug => "",
-    };
-    let text = message.message.to_string();
+pub enum MessageLevel {
+  Error,
+  Success,
+}
 
-    Self {
-      class,
-      text,
-    }
+impl PageMessage {
+  pub fn new(level: MessageLevel, text: impl Into<String> ) -> PageMessage {
+    let class = match level {
+      MessageLevel::Error => "is-danger",
+      MessageLevel::Success => "is-success",
+    };
+    PageMessage { class, text: text.into() }
   }
 }
 
-pub type PageMessages = Vec<PageMessage>;
+#[derive(Serialize)]
+pub struct PageMessages(Vec<PageMessage>);
+
+impl PageMessages {
+  pub fn new() -> PageMessages {
+    PageMessages(Vec::new())
+  }
+
+  pub fn add(&mut self, message: PageMessage) {
+    self.0.push(message);
+  }
+
+  pub fn success(&mut self, text: &str) {
+    self.add(PageMessage::new(MessageLevel::Success, text));
+  }
+
+  pub fn error(&mut self, text: &str) {
+    self.add(PageMessage::new(MessageLevel::Error, text));
+  }
+}

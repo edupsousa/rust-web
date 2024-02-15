@@ -1,11 +1,7 @@
 use crate::templates::{render_to_response, TemplateEngine};
 
-use super::{
-    messages::{PageMessage, PageMessages},
-    navbar::NavbarTemplateData,
-};
+use super::{messages::PageMessages, navbar::NavbarTemplateData};
 use axum::response::Response;
-use axum_messages::Messages;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -33,7 +29,9 @@ where
 }
 
 pub struct PageTemplateBuilder<T>
-where T: Serialize {
+where
+    T: Serialize,
+{
     template_name: &'static str,
     content: Option<T>,
     navbar: Option<NavbarTemplateData>,
@@ -41,7 +39,9 @@ where T: Serialize {
 }
 
 impl<T> PageTemplateBuilder<T>
-where T: Serialize {
+where
+    T: Serialize,
+{
     pub fn new(template_name: &'static str) -> Self {
         Self {
             template_name,
@@ -61,8 +61,8 @@ where T: Serialize {
         self
     }
 
-    pub fn messages(mut self, messages: Messages) -> Self {
-        self.messages = Some(messages.into_iter().map(PageMessage::from).collect());
+    pub fn maybe_messages(mut self, messages: Option<PageMessages>) -> Self {
+        self.messages = messages;
         self
     }
 

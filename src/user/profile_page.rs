@@ -7,11 +7,10 @@ use axum::{
     Form,
 };
 use axum_login::AuthUser;
-use axum_messages::Messages;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::AppState, auth::layer::AuthSession, layout::page_template::PageTemplate,
+    app::AppState, auth::layer::AuthSession, layout::{messages::PageMessages, page_template::PageTemplate},
     templates::TemplateEngine,
 };
 
@@ -33,12 +32,12 @@ pub struct ProfilePage {
 fn render_profile_page(
     template_engine: &TemplateEngine,
     data: ProfilePage,
-    messages: Messages,
+    messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("user/profile")
         .content(data)
         .navbar(true)
-        .messages(messages)
+        .maybe_messages(messages)
         .build()
         .render(template_engine)
 }
@@ -66,7 +65,6 @@ impl From<GetUserProfileResult> for ProfileForm {
 pub async fn get_profile_page(
     State(app): State<AppState>,
     auth_session: AuthSession,
-    messages: Messages,
 ) -> Response {
     let user = auth_session.user.unwrap();
     let form = match get_user_profile(&app.database_connection, user.id()).await {
@@ -80,7 +78,7 @@ pub async fn get_profile_page(
             form,
             errors: FormErrors::default(),
         },
-        messages,
+        None,
     )
 }
 
@@ -95,9 +93,9 @@ impl From<ProfileForm> for db_user_profile::SaveUserProfileData {
 pub async fn post_profile_page(
     State(app): State<AppState>,
     auth_session: AuthSession,
-    messages: Messages,
     Form(form): Form<ProfileForm>,
 ) -> Response {
+    let mut messages = PageMessages::new();
     let user = auth_session.user.unwrap();
     let user_id = user.id();
 
@@ -124,5 +122,5 @@ pub async fn post_profile_page(
 
     let data = ProfilePage { form, errors };
 
-    render_profile_page(&app.template_engine, data, messages)
+    render_profile_page(&app.template_engine, data, Some(messages))
 }
