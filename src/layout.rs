@@ -1,3 +1,3 @@
 pub mod navbar;
 pub mod messages;
-pub mod page;
+pub mod page_template;

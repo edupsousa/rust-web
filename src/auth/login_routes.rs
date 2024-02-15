@@ -1,6 +1,6 @@
 use crate::app::AppState;
 use crate::auth;
-use crate::layout::page::PageTemplate;
+use crate::layout::page_template::PageTemplate;
 use crate::templates::TemplateEngine;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app::AppState,
     auth::layer::AuthSession,
-    layout::page::PageTemplate,
+    layout::page_template::PageTemplate,
     templates::{render_to_response, TemplateEngine},
 };
 

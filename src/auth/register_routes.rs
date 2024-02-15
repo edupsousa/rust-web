@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{db_user, layer::AuthSession};
-use crate::{app::AppState, layout::page::PageTemplate, templates::TemplateEngine};
+use crate::{app::AppState, layout::page_template::PageTemplate, templates::TemplateEngine};
 use axum::{
     extract::State,
     http::StatusCode,

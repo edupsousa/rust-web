@@ -7,7 +7,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::{
     auth::{self, layer::AuthSession},
-    layout::{navbar::NavbarTemplateData, page::PageTemplate},
+    layout::{navbar::NavbarTemplateData, page_template::PageTemplate},
     templates::TemplateEngine,
     user,
 };
