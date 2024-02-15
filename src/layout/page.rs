@@ -1,15 +1,12 @@
 use crate::templates::{render_to_response, TemplateEngine};
 
-use super::navbar::NavbarTemplateData;
+use super::{
+    messages::{PageMessage, PageMessages},
+    navbar::NavbarTemplateData,
+};
 use axum::response::Response;
-use axum_messages::{Level, Messages};
+use axum_messages::Messages;
 use serde::Serialize;
-
-#[derive(Serialize)]
-struct Message {
-    class: String,
-    text: String,
-}
 
 #[derive(Serialize)]
 pub struct PageTemplateData<T>
@@ -18,19 +15,8 @@ where
 {
     navbar: NavbarTemplateData,
     content: T,
-    messages: Vec<Message>,
+    messages: PageMessages,
     content_template: &'static str,
-}
-
-fn get_level_class(level: &Level) -> String {
-    match level {
-        Level::Error => "is-danger",
-        Level::Warning => "is-warning",
-        Level::Info => "is-info",
-        Level::Success => "is-success",
-        Level::Debug => "",
-    }
-    .to_string()
 }
 
 impl<T> PageTemplateData<T>
@@ -46,14 +32,13 @@ where
         }
     }
 
-    pub fn new_with_messages(content_template: &'static str, is_signed_in: bool, content: T, messages: Messages) -> Self {
-        let messages = messages
-            .into_iter()
-            .map(|message| Message {
-                class: get_level_class(&message.level),
-                text: message.message,
-            })
-            .collect::<Vec<_>>();
+    pub fn new_with_messages(
+        content_template: &'static str,
+        is_signed_in: bool,
+        content: T,
+        messages: Messages,
+    ) -> Self {
+        let messages = messages.into_iter().map(PageMessage::from).collect();
 
         Self {
             navbar: NavbarTemplateData::new(is_signed_in),
