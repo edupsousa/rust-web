@@ -14,7 +14,7 @@
   {{#with navbar }}
   {{> layout/navbar }}
   {{/with}}
-  {{> (lookup this "content_template") }}
+  {{> (lookup this "template_name") content }}
   {{> layout/messages }}
   </body>
 </html>
