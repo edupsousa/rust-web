@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::{db_user, layer::AuthSession};
 use crate::{app::AppState, layout::page_template::PageTemplate, templates::TemplateEngine};
 use axum::{
@@ -8,39 +6,18 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     Form,
 };
+use axum_messages::Messages;
 use serde::{Deserialize, Serialize};
+use validator::{Validate, ValidationErrors};
 
-#[derive(Deserialize, Serialize, Default, Debug)]
+#[derive(Debug, Deserialize, Serialize, Default, Validate)]
 pub struct RegisterForm {
+    #[validate(email(message = "Invalid email address"))]
     email: String,
+    #[validate(length(min = 8, message = "Password must be at least 8 characters long"))]
     password: String,
+    #[validate(must_match(other = "password", message = "Passwords do not match"))]
     confirm_password: String,
-}
-
-type FormErrors = HashMap<&'static str, &'static str>;
-
-impl RegisterForm {
-    fn get_errors(&self) -> FormErrors {
-        let mut errors = FormErrors::default();
-
-        if self.email.is_empty() {
-            errors.insert("email", "Email is required");
-        } else if !validator::validate_email(&self.email) {
-            errors.insert("email", "Invalid email address");
-        }
-
-        if self.password.len() < 8 {
-            errors.insert("password", "Password must be at least 8 characters long");
-        }
-
-        if self.confirm_password.is_empty() {
-            errors.insert("confirm_password", "Confirm password is required");
-        } else if self.password != self.confirm_password {
-            errors.insert("confirm_password", "Passwords do not match");
-        }
-
-        errors
-    }
 }
 
 impl From<RegisterForm> for db_user::CreateUserData {
@@ -52,30 +29,35 @@ impl From<RegisterForm> for db_user::CreateUserData {
     }
 }
 
-#[derive(Serialize, Default, Debug)]
+#[derive(Debug, Default, Serialize)]
 pub struct RegisterPageData {
     form: RegisterForm,
-    errors: FormErrors,
+    errors: ValidationErrors,
 }
 
-pub async fn get_register(State(app): State<AppState>, auth_session: AuthSession) -> Response {
+pub async fn get_register(
+    State(app): State<AppState>,
+    auth_session: AuthSession,
+    messages: Messages,
+) -> Response {
     render_register_page(
         &app.template_engine,
-        auth_session.user.is_some(),
         RegisterPageData::default(),
+        auth_session.user.is_some(),
+        messages,
     )
 }
 
 pub async fn post_register(
     State(app): State<AppState>,
     auth_session: AuthSession,
+    messages: Messages,
     Form(form): Form<RegisterForm>,
 ) -> Response {
-    let mut errors: FormErrors = form.get_errors();
-    if errors.is_empty() {
-        if db_user::user_exists(&app.database_connection, &form.email).await {
-            errors.insert("email", "Email is already registered");
-        } else {
+    let errors = form.validate().err();
+    if errors.is_none() {
+        let exists = db_user::user_exists(&app.database_connection, &form.email).await;
+        if !exists {
             match db_user::create_user(&app.database_connection, form.into()).await {
                 Ok(_) => {
                     return Redirect::to("/login?registered=true").into_response();
@@ -87,23 +69,30 @@ pub async fn post_register(
                 }
             }
         }
+        // TODO: How to use messages after cloning
+        // messages.error("User already exists");
     }
+
+    let errors = errors.unwrap_or_default();
 
     render_register_page(
         &app.template_engine,
-        auth_session.user.is_some(),
         RegisterPageData { form, errors },
+        auth_session.user.is_some(),
+        messages,
     )
 }
 
 fn render_register_page(
     template_engine: &TemplateEngine,
-    is_signed_in: bool,
     data: RegisterPageData,
+    is_signed_in: bool,
+    messages: Messages,
 ) -> Response {
     PageTemplate::builder("auth/register")
-        .navbar(is_signed_in)
         .content(data)
+        .navbar(is_signed_in)
+        .messages(messages)
         .build()
         .render(template_engine)
 }

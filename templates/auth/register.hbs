@@ -6,9 +6,15 @@
       <div class="control">
         <input class="input {{#if errors.email}}is-danger{{/if}}" type="email" placeholder="Enter your email" name="email" id="email" value="{{form.email}}">
       </div>
-      {{#if errors.email}}
-      <p class="help is-danger">{{errors.email}}</p>
-      {{/if}}
+      {{#with errors.email}}
+      <ul class="help is-danger">
+        {{#each this}}
+        <li>
+          {{message}}
+        </li>
+        {{/each}}
+      </ul>
+      {{/with}}
     </div>
 
     <div class="field">
@@ -16,9 +22,15 @@
       <div class="control">
         <input class="input {{#if errors.password}}is-danger{{/if}}" type="password" placeholder="Enter your password" name="password" id="password" value="{{form.password}}">
       </div>
-      {{#if errors.password}}
-      <p class="help is-danger">{{errors.password}}</p>
-      {{/if}}
+      {{#with errors.password}}
+      <ul class="help is-danger">
+        {{#each this}}
+        <li>
+          {{message}}
+        </li>
+        {{/each}}
+      </ul>
+      {{/with}}
     </div>
 
     <div class="field">
@@ -26,9 +38,15 @@
       <div class="control">
         <input class="input {{#if errors.confirm_password}}is-danger{{/if}}" type="password" placeholder="Confirm your password" name="confirm_password" id="confirm_password" value="{{form.confirm_password}}">
       </div>
-      {{#if errors.confirm_password}}
-      <p class="help is-danger">{{errors.confirm_password}}</p>
-      {{/if}}
+      {{#with errors.confirm_password}}
+      <ul class="help is-danger">
+        {{#each this}}
+        <li>
+          {{message}}
+        </li>
+        {{/each}}
+      </ul>
+      {{/with}}
     </div>
 
     <div class="field">
@@ -38,3 +56,6 @@
     </div>
   </form>
 </div>
+<pre>
+  {{errors}}
+</pre>
