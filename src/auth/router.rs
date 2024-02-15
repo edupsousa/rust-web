@@ -1,8 +1,8 @@
 use crate::app::AppState;
 
 use super::{
-    login_routes::{get_login, get_logout, post_login},
-    register_routes::{get_register, post_register},
+    login_page::{get_login, get_logout, post_login},
+    register_page::{get_register, post_register},
 };
 use axum::{
     routing::{get, post},
