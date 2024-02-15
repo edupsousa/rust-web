@@ -11,10 +11,8 @@ use axum_messages::Messages;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::AppState,
-    auth::layer::AuthSession,
-    layout::page_template::PageTemplate,
-    templates::{render_to_response, TemplateEngine},
+    app::AppState, auth::layer::AuthSession, layout::page_template::PageTemplate,
+    templates::TemplateEngine,
 };
 
 use super::db_user_profile::{self, get_user_profile, GetUserProfileResult};
@@ -37,8 +35,12 @@ fn render_profile_page(
     data: ProfilePage,
     messages: Messages,
 ) -> Response {
-    let page_data = PageTemplate::new_with_messages("user/profile", true, data, messages);
-    render_to_response(template_engine, "user/profile", &page_data)
+    PageTemplate::builder("user/profile")
+        .content(data)
+        .navbar(true)
+        .messages(messages)
+        .build()
+        .render(template_engine)
 }
 
 impl ProfileForm {

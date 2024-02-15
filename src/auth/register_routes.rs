@@ -101,5 +101,9 @@ fn render_register_page(
     is_signed_in: bool,
     data: RegisterPageData,
 ) -> Response {
-    PageTemplate::new("auth/register", is_signed_in, data).render(template_engine)
+    PageTemplate::builder("auth/register")
+        .navbar(is_signed_in)
+        .content(data)
+        .build()
+        .render(template_engine)
 }

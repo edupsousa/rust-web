@@ -68,16 +68,15 @@ pub fn render_login_page(
     form: LoginForm,
     errors: FormErrors,
 ) -> Response {
-    PageTemplate::new(
-        "auth/login",
-        is_signed_in,
-        LoginPageData {
-            next_url: next,
+    PageTemplate::builder("auth/login")
+        .content(LoginPageData {
             form,
             errors,
-        },
-    )
-    .render(template_engine)
+            next_url: next,
+        })
+        .navbar(is_signed_in)
+        .build()
+        .render(template_engine)
 }
 
 pub async fn get_login(

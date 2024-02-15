@@ -18,3 +18,9 @@ impl NavbarTemplateData {
         }
     }
 }
+
+impl Default for NavbarTemplateData {
+    fn default() -> Self {
+        Self::new(false)
+    }
+}

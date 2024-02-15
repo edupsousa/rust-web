@@ -50,7 +50,11 @@ struct IndexTemplate {
 }
 
 pub async fn get_root(State(app): State<AppState>, auth_session: AuthSession) -> Response {
-    PageTemplate::new("index", auth_session.user.is_some(), &()).render(&app.template_engine)
+    PageTemplate::builder("index")
+        .content(())
+        .navbar(auth_session.user.is_some())
+        .build()
+        .render(&app.template_engine)
 }
 
 pub async fn get_protected() -> &'static str {
