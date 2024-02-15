@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app::AppState,
     auth::layer::AuthSession,
-    layout::page::PageTemplateData,
+    layout::page::PageTemplate,
     templates::{render_to_response, TemplateEngine},
 };
 
@@ -37,7 +37,7 @@ fn render_profile_page(
     data: ProfilePage,
     messages: Messages,
 ) -> Response {
-    let page_data = PageTemplateData::new_with_messages("user/profile", true, data, messages);
+    let page_data = PageTemplate::new_with_messages("user/profile", true, data, messages);
     render_to_response(template_engine, "user/profile", &page_data)
 }
 

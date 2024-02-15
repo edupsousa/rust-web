@@ -1,6 +1,6 @@
 use crate::app::AppState;
 use crate::auth;
-use crate::layout::page::PageTemplateData;
+use crate::layout::page::PageTemplate;
 use crate::templates::TemplateEngine;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -68,7 +68,7 @@ pub fn render_login_page(
     form: LoginForm,
     errors: FormErrors,
 ) -> Response {
-    PageTemplateData::new(
+    PageTemplate::new(
         "auth/login",
         is_signed_in,
         LoginPageData {

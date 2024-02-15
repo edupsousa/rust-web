@@ -9,7 +9,7 @@ use axum_messages::Messages;
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct PageTemplateData<T>
+pub struct PageTemplate<T>
 where
     T: Serialize,
 {
@@ -19,7 +19,7 @@ where
     content_template: &'static str,
 }
 
-impl<T> PageTemplateData<T>
+impl<T> PageTemplate<T>
 where
     T: Serialize,
 {
