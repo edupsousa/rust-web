@@ -34,7 +34,7 @@ impl From<LoginForm> for auth::layer::Credentials {
 #[derive(Serialize, Default, Debug)]
 pub struct LoginPageData {
     form: LoginForm,
-    errors: ValidationErrors,
+    errors: Option<ValidationErrors>,
     next_url: Option<String>,
 }
 
@@ -48,7 +48,7 @@ pub fn render_login_page(
     is_signed_in: bool,
     next: Option<String>,
     form: LoginForm,
-    errors: ValidationErrors,
+    errors: Option<ValidationErrors>,
     messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("auth/login")
@@ -73,7 +73,7 @@ pub async fn get_login(
         auth_session.user.is_some(),
         next,
         LoginForm::default(),
-        ValidationErrors::default(),
+        None,
         None,
     )
 }
@@ -91,7 +91,7 @@ pub async fn post_login(
             auth_session.user.is_some(),
             next,
             form,
-            errors,
+            Some(errors),
             None,
         );
     }
@@ -105,7 +105,7 @@ pub async fn post_login(
                 auth_session.user.is_some(),
                 next,
                 form,
-                ValidationErrors::default(),
+                None,
                 Some(messages),
             );
         }

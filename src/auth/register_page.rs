@@ -35,7 +35,7 @@ impl From<RegisterForm> for db_user::CreateUserData {
 #[derive(Debug, Default, Serialize)]
 pub struct RegisterPageData {
     form: RegisterForm,
-    errors: ValidationErrors,
+    errors: Option<ValidationErrors>,
 }
 
 pub async fn get_register(State(app): State<AppState>, auth_session: AuthSession) -> Response {
@@ -52,33 +52,44 @@ pub async fn post_register(
     auth_session: AuthSession,
     Form(form): Form<RegisterForm>,
 ) -> Response {
-    let mut messages = PageMessages::new();
-    let errors = form.validate().err();
-    if errors.is_none() {
-        let exists = db_user::user_exists(&app.database_connection, &form.email).await;
-        if !exists {
-            match db_user::create_user(&app.database_connection, form.into()).await {
-                Ok(_) => {
-                    return Redirect::to("/login?registered=true").into_response();
-                }
-                Err(e) => {
-                    tracing::error!("Failed to create user: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user")
-                        .into_response();
-                }
-            }
-        }
-        messages.error("User already exists");
+
+    if let Err(errors) = form.validate() {
+        return render_register_page(
+            &app.template_engine,
+            RegisterPageData {
+                form,
+                errors: Some(errors),
+            },
+            auth_session.user.is_some(),
+            None,
+        );
     }
 
-    let errors = errors.unwrap_or_default();
+    if db_user::user_exists(&app.database_connection, &form.email).await {
+        let mut messages = PageMessages::new();
+        messages.error("User already exists");
+        return render_register_page(
+            &app.template_engine,
+            RegisterPageData {
+                form,
+                errors: None,
+            },
+            auth_session.user.is_some(),
+            Some(messages)
+        );
+    }
 
-    render_register_page(
-        &app.template_engine,
-        RegisterPageData { form, errors },
-        auth_session.user.is_some(),
-        Some(messages),
-    )
+    match db_user::create_user(&app.database_connection, form.into()).await {
+        Ok(_) => {
+            Redirect::to("/login?registered=true").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to create user: {:?}", e);
+            
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user")
+                .into_response()
+        }
+    }
 }
 
 fn render_register_page(
