@@ -52,7 +52,6 @@ pub async fn post_register(
     auth_session: AuthSession,
     Form(form): Form<RegisterForm>,
 ) -> Response {
-
     if let Err(errors) = form.validate() {
         return render_register_page(
             &app.template_engine,
@@ -70,24 +69,18 @@ pub async fn post_register(
         messages.error("User already exists");
         return render_register_page(
             &app.template_engine,
-            RegisterPageData {
-                form,
-                errors: None,
-            },
+            RegisterPageData { form, errors: None },
             auth_session.user.is_some(),
-            Some(messages)
+            Some(messages),
         );
     }
 
     match db_user::create_user(&app.database_connection, form.into()).await {
-        Ok(_) => {
-            Redirect::to("/login?registered=true").into_response()
-        }
+        Ok(_) => Redirect::to("/login?registered=true").into_response(),
         Err(e) => {
             tracing::error!("Failed to create user: {:?}", e);
-            
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user")
-                .into_response()
+
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user").into_response()
         }
     }
 }

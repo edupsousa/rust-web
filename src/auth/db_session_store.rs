@@ -48,7 +48,11 @@ impl SessionStore for DatabaseSessionStore {
             expiry: Set(record.expiry_date.unix_timestamp().try_into().unwrap()),
         };
 
-        match session::Entity::find_by_id(record.id.to_string()).one(&self.db).await.unwrap() {
+        match session::Entity::find_by_id(record.id.to_string())
+            .one(&self.db)
+            .await
+            .unwrap()
+        {
             Some(_) => {
                 session::Entity::update(new_session)
                     .filter(session::Column::Id.eq(record.id.to_string()))

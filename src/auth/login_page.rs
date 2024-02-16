@@ -84,7 +84,6 @@ pub async fn post_login(
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
 ) -> Response {
-    
     if let Err(errors) = form.validate() {
         return render_login_page(
             &app.template_engine,
