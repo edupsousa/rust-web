@@ -3,23 +3,20 @@ use crate::templates::{render_to_response, TemplateEngine};
 use super::{messages::PageMessages, navbar::NavbarTemplateData};
 use axum::response::Response;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Serialize)]
-pub struct PageTemplate<T>
-where
-    T: Serialize,
+pub struct PageTemplate
 {
     navbar: NavbarTemplateData,
-    content: Option<T>,
+    content: Option<Value>,
     messages: Option<PageMessages>,
-    template_name: &'static str,
+    template_name: String,
 }
 
-impl<T> PageTemplate<T>
-where
-    T: Serialize,
+impl PageTemplate
 {
-    pub fn builder(template_name: &'static str) -> PageTemplateBuilder<T> {
+    pub fn builder(template_name: impl Into<String>) -> PageTemplateBuilder {
         PageTemplateBuilder::new(template_name)
     }
 
@@ -28,31 +25,32 @@ where
     }
 }
 
-pub struct PageTemplateBuilder<T>
-where
-    T: Serialize,
+pub struct PageTemplateBuilder
 {
-    template_name: &'static str,
-    content: Option<T>,
+    template_name: String,
+    content: Option<Value>,
     navbar: Option<NavbarTemplateData>,
     messages: Option<PageMessages>,
 }
 
-impl<T> PageTemplateBuilder<T>
-where
-    T: Serialize,
+impl PageTemplateBuilder
 {
-    pub fn new(template_name: &'static str) -> Self {
+    pub fn new(template_name: impl Into<String>) -> Self {
         Self {
-            template_name,
+            template_name: template_name.into(),
             content: None,
             navbar: None,
             messages: None,
         }
     }
 
-    pub fn content(mut self, content: T) -> Self {
+    pub fn content(mut self, content: Value) -> Self {
         self.content = Some(content);
+        self
+    }
+
+    pub fn maybe_content(mut self, content: Option<Value>) -> Self {
+        self.content = content;
         self
     }
 
@@ -66,7 +64,7 @@ where
         self
     }
 
-    pub fn build(self) -> PageTemplate<T> {
+    pub fn build(self) -> PageTemplate {
         PageTemplate {
             navbar: self.navbar.unwrap_or_default(),
             content: self.content,

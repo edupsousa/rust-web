@@ -1,8 +1,7 @@
 use crate::auth;
-use crate::layout::layout_middleware::LayoutMiddleware;
+use crate::layout::template_response::TemplateResponse;
 use axum::extract::Query;
 use axum::http::StatusCode;
-use axum::Extension;
 use axum::{
     response::{IntoResponse, Redirect, Response},
     Form,
@@ -39,77 +38,67 @@ pub struct NextUrl {
     next: Option<String>,
 }
 
-pub async fn get_login(
-    Extension(mut layout): Extension<LayoutMiddleware>,
-    Query(query): Query<NextUrl>,
-) -> Response {
-    layout.add_success_message("Please use the form above to login");
-    layout.render(
-        "auth/login",
-        LoginPageData {
+pub async fn get_login(Query(query): Query<NextUrl>) -> impl IntoResponse {
+    TemplateResponse::new("auth/login")
+        .content(LoginPageData {
             form: LoginForm::default(),
             errors: None,
             next_url: query.next,
-        },
-    )
+        })
+        .add_success_message("Please use the form above to login")
 }
 
 pub async fn post_login(
-    Extension(mut layout): Extension<LayoutMiddleware>,
     mut auth_session: auth::layer::AuthSession,
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
 ) -> Response {
+    let template = TemplateResponse::new("auth/login");
     if let Err(errors) = form.validate() {
-        layout.add_error_message("Please fix the errors above");
-        return layout.render(
-            "auth/login",
-            LoginPageData {
+        return template
+            .add_error_message("Please fix the errors above")
+            .content(LoginPageData {
                 form,
                 errors: Some(errors),
                 next_url: next,
-            },
-        );
+            })
+            .into_response();
     }
     let user = match auth_session.authenticate(form.clone().into()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
-            layout.add_error_message("Invalid email or password");
-            return layout.render(
-                "auth/login",
-                LoginPageData {
+            return template
+                .add_error_message("Invalid email or password")
+                .content(LoginPageData {
                     form,
                     errors: None,
                     next_url: next,
-                },
-            );
+                })
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to authenticate user: {:?}", e);
-            layout
-                .add_error_message("Internal Error: Failed to authenticate user, try again later");
-            return layout.render(
-                "auth/login",
-                LoginPageData {
+            return template
+                .add_error_message("Internal Error: Failed to authenticate user, try again later")
+                .content(LoginPageData {
                     form,
                     errors: None,
                     next_url: next,
-                },
-            );
+                })
+                .into_response();
         }
     };
 
     if auth_session.login(&user).await.is_err() {
         tracing::error!("Failed to login user: {:?}", user);
-        layout.add_error_message("Internal Error: Failed to login user, try again later");
-        return layout.render(
-            "auth/login",
-            LoginPageData {
+        return template
+            .add_error_message("Internal Error: Failed to login user, try again later")
+            .content(LoginPageData {
                 form,
                 errors: None,
                 next_url: next,
-            },
-        );
+            })
+            .into_response();
     }
 
     if let Some(next) = next {

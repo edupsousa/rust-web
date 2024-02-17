@@ -92,7 +92,7 @@ fn render_register_page(
     messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("auth/register")
-        .content(data)
+        .content(serde_json::to_value(data).unwrap())
         .navbar(is_signed_in)
         .maybe_messages(messages)
         .build()

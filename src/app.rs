@@ -7,7 +7,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::{
     auth::{self, layer::AuthSession},
-    layout::{layout_middleware::with_layout_middleware, navbar::NavbarTemplateData, page_template::PageTemplate},
+    layout::{navbar::NavbarTemplateData, page_template::PageTemplate, template_response::with_template_response},
     templates::TemplateEngine,
     user,
 };
@@ -38,7 +38,7 @@ pub fn create_app(
         .merge(auth_router)
         .route("/public", get(get_public))
         .route("/", get(get_root))
-        .layer(middleware::from_fn_with_state(app_state.clone(), with_layout_middleware))
+        .layer(middleware::from_fn_with_state(app_state.clone(), with_template_response))
         .layer(MessagesManagerLayer)
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
@@ -52,7 +52,6 @@ struct IndexTemplate {
 
 pub async fn get_root(State(app): State<AppState>, auth_session: AuthSession) -> Response {
     PageTemplate::builder("index")
-        .content(())
         .navbar(auth_session.user.is_some())
         .build()
         .render(&app.template_engine)

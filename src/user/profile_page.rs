@@ -35,7 +35,7 @@ fn render_profile_page(
     messages: Option<PageMessages>,
 ) -> Response {
     PageTemplate::builder("user/profile")
-        .content(data)
+        .content(serde_json::to_value(data).unwrap())
         .navbar(true)
         .maybe_messages(messages)
         .build()
