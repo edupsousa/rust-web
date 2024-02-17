@@ -1,4 +1,4 @@
-use axum::{extract::State, response::Response, routing::get, Router};
+use axum::{extract::State, middleware, response::Response, routing::get, Router};
 use axum_login::login_required;
 use axum_messages::MessagesManagerLayer;
 use sea_orm::DatabaseConnection;
@@ -7,7 +7,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::{
     auth::{self, layer::AuthSession},
-    layout::{navbar::NavbarTemplateData, page_template::PageTemplate},
+    layout::{layout_middleware::with_layout_middleware, navbar::NavbarTemplateData, page_template::PageTemplate},
     templates::TemplateEngine,
     user,
 };
@@ -38,6 +38,7 @@ pub fn create_app(
         .merge(auth_router)
         .route("/public", get(get_public))
         .route("/", get(get_root))
+        .layer(middleware::from_fn_with_state(app_state.clone(), with_layout_middleware))
         .layer(MessagesManagerLayer)
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())

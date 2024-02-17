@@ -1,18 +1,14 @@
-use crate::app::AppState;
 use crate::auth;
-use crate::layout::messages::PageMessages;
-use crate::layout::page_template::PageTemplate;
-use crate::templates::TemplateEngine;
-use axum::extract::{Query, State};
+use crate::layout::layout_middleware::LayoutMiddleware;
+use axum::extract::Query;
 use axum::http::StatusCode;
+use axum::Extension;
 use axum::{
     response::{IntoResponse, Redirect, Response},
     Form,
 };
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
-
-use super::layer::AuthSession;
 
 #[derive(Deserialize, Serialize, Default, Debug, Clone, Validate)]
 pub struct LoginForm {
@@ -43,83 +39,77 @@ pub struct NextUrl {
     next: Option<String>,
 }
 
-pub fn render_login_page(
-    template_engine: &TemplateEngine,
-    is_signed_in: bool,
-    next: Option<String>,
-    form: LoginForm,
-    errors: Option<ValidationErrors>,
-    messages: Option<PageMessages>,
-) -> Response {
-    PageTemplate::builder("auth/login")
-        .content(LoginPageData {
-            form,
-            errors,
-            next_url: next,
-        })
-        .maybe_messages(messages)
-        .navbar(is_signed_in)
-        .build()
-        .render(template_engine)
-}
-
 pub async fn get_login(
-    State(app): State<AppState>,
-    auth_session: AuthSession,
-    Query(NextUrl { next }): Query<NextUrl>,
+    Extension(mut layout): Extension<LayoutMiddleware>,
+    Query(query): Query<NextUrl>,
 ) -> Response {
-    render_login_page(
-        &app.template_engine,
-        auth_session.user.is_some(),
-        next,
-        LoginForm::default(),
-        None,
-        None,
+    layout.add_success_message("Please use the form above to login");
+    layout.render(
+        "auth/login",
+        LoginPageData {
+            form: LoginForm::default(),
+            errors: None,
+            next_url: query.next,
+        },
     )
 }
 
 pub async fn post_login(
+    Extension(mut layout): Extension<LayoutMiddleware>,
     mut auth_session: auth::layer::AuthSession,
-    State(app): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
     Form(form): Form<LoginForm>,
 ) -> Response {
     if let Err(errors) = form.validate() {
-        return render_login_page(
-            &app.template_engine,
-            auth_session.user.is_some(),
-            next,
-            form,
-            Some(errors),
-            None,
+        layout.add_error_message("Please fix the errors above");
+        return layout.render(
+            "auth/login",
+            LoginPageData {
+                form,
+                errors: Some(errors),
+                next_url: next,
+            },
         );
     }
     let user = match auth_session.authenticate(form.clone().into()).await {
         Ok(Some(user)) => user,
         Ok(None) => {
-            let mut messages = PageMessages::new();
-            messages.error("Invalid email or password");
-            return render_login_page(
-                &app.template_engine,
-                auth_session.user.is_some(),
-                next,
-                form,
-                None,
-                Some(messages),
+            layout.add_error_message("Invalid email or password");
+            return layout.render(
+                "auth/login",
+                LoginPageData {
+                    form,
+                    errors: None,
+                    next_url: next,
+                },
             );
         }
         Err(e) => {
             tracing::error!("Failed to authenticate user: {:?}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to authenticate user",
-            )
-                .into_response();
+            layout
+                .add_error_message("Internal Error: Failed to authenticate user, try again later");
+            return layout.render(
+                "auth/login",
+                LoginPageData {
+                    form,
+                    errors: None,
+                    next_url: next,
+                },
+            );
         }
     };
 
     if auth_session.login(&user).await.is_err() {
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to login").into_response();
+        tracing::error!("Failed to login user: {:?}", user);
+        layout.add_error_message("Internal Error: Failed to login user, try again later");
+        return layout.render(
+            "auth/login",
+            LoginPageData {
+                form,
+                errors: None,
+                next_url: next,
+            },
+        );
     }
 
     if let Some(next) = next {

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PageMessage {
     pub class: &'static str,
     pub text: String,
@@ -24,7 +24,7 @@ impl PageMessage {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PageMessages(Vec<PageMessage>);
 
 impl PageMessages {
