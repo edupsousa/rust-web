@@ -45,7 +45,6 @@ pub async fn get_login(Query(query): Query<NextUrl>) -> impl IntoResponse {
             errors: None,
             next_url: query.next,
         })
-        .add_success_message("Please use the form above to login")
 }
 
 pub async fn post_login(

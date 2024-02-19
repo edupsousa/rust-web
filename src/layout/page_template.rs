@@ -44,11 +44,6 @@ impl PageTemplateBuilder
         }
     }
 
-    pub fn content(mut self, content: Value) -> Self {
-        self.content = Some(content);
-        self
-    }
-
     pub fn maybe_content(mut self, content: Option<Value>) -> Self {
         self.content = content;
         self

@@ -1,23 +1,17 @@
 use axum::{
     extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Redirect, Response},
+    response::{IntoResponse, Response},
     Form,
 };
 use axum_login::AuthUser;
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 
-use crate::{
-    app::AppState,
-    auth::layer::AuthSession,
-    layout::{messages::PageMessages, page_template::PageTemplate},
-    templates::TemplateEngine,
-};
+use crate::{app::AppState, auth::layer::AuthSession, layout::template_response::TemplateResponse};
 
 use super::db_user_profile::{self, get_user_profile, GetUserProfileResult};
 
-#[derive(Serialize, Deserialize, Default, Validate)]
+#[derive(Serialize, Deserialize, Default, Validate, Clone)]
 pub struct ProfileForm {
     #[validate(length(min = 1, message = "Display name is required"))]
     display_name: String,
@@ -27,19 +21,6 @@ pub struct ProfileForm {
 pub struct ProfilePage {
     form: ProfileForm,
     errors: ValidationErrors,
-}
-
-fn render_profile_page(
-    template_engine: &TemplateEngine,
-    data: ProfilePage,
-    messages: Option<PageMessages>,
-) -> Response {
-    PageTemplate::builder("user/profile")
-        .content(serde_json::to_value(data).unwrap())
-        .navbar(true)
-        .maybe_messages(messages)
-        .build()
-        .render(template_engine)
 }
 
 impl From<GetUserProfileResult> for ProfileForm {
@@ -57,14 +38,12 @@ pub async fn get_profile_page(State(app): State<AppState>, auth_session: AuthSes
         None => ProfileForm::default(),
     };
 
-    render_profile_page(
-        &app.template_engine,
-        ProfilePage {
+    TemplateResponse::new("user/profile")
+        .content(ProfilePage {
             form,
             errors: ValidationErrors::default(),
-        },
-        None,
-    )
+        })
+        .into_response()
 }
 
 impl From<ProfileForm> for db_user_profile::SaveUserProfileData {
@@ -80,32 +59,41 @@ pub async fn post_profile_page(
     auth_session: AuthSession,
     Form(form): Form<ProfileForm>,
 ) -> Response {
-    let mut messages = PageMessages::new();
     let user = auth_session.user.unwrap();
     let user_id = user.id();
+    let response = TemplateResponse::new("user/profile");
 
     match form.validate() {
         Ok(()) => {
-            match db_user_profile::save_user_profile(&app.database_connection, user_id, form.into())
-                .await
+            match db_user_profile::save_user_profile(
+                &app.database_connection,
+                user_id,
+                form.clone().into(),
+            )
+            .await
             {
-                Ok(()) => {
-                    messages.success("Profile updated");
-
-                    Redirect::to("/user/profile").into_response()
-                }
+                Ok(()) => response
+                    .content(ProfilePage {
+                        form,
+                        errors: ValidationErrors::default(),
+                    })
+                    .add_success_message("Profile updated")
+                    .into_response(),
                 Err(e) => {
                     tracing::error!("Failed to save user profile: {:?}", e);
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to save user profile",
-                    )
+
+                    response
+                        .content(ProfilePage {
+                            form,
+                            errors: ValidationErrors::default(),
+                        })
+                        .add_error_message("Failed to save user profile")
                         .into_response()
                 }
             }
         }
-        Err(errors) => {
-            render_profile_page(&app.template_engine, ProfilePage { form, errors }, None)
-        }
+        Err(errors) => response
+            .content(ProfilePage { form, errors })
+            .into_response(),
     }
 }
