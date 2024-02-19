@@ -1,14 +1,17 @@
 use axum::{
-    extract::{Request, State},
-    middleware::Next,
-    response::{IntoResponse, Response}, Extension,
+    extract::State,
+    response::{IntoResponse, Response},
+    Extension,
 };
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::{app::AppState, auth::layer::AuthSession};
 
-use super::{messages::{MessageLevel, PageMessage, PageMessages}, page_template::PageTemplate};
+use super::{
+    messages::{MessageLevel, PageMessage, PageMessages},
+    page_template::PageTemplate,
+};
 
 #[derive(Clone)]
 pub struct TemplateResponse {
@@ -56,18 +59,17 @@ impl IntoResponse for TemplateResponse {
 pub async fn with_template_response(
     State(app_state): State<AppState>,
     auth_session: AuthSession,
-    request: Request,
-    next: Next,
+    response: Response,
 ) -> Response {
-    let response = next.run(request).await;
     let response = match response.extensions().get::<TemplateResponse>() {
         Some(template_response) => {
+            let template_response = template_response.to_owned();
             let template_engine = app_state.template_engine;
             let is_signed_in = auth_session.user.is_some();
-            return PageTemplate::builder(template_response.partial_name.clone())
-                .maybe_content(template_response.content.clone())
+            return PageTemplate::builder(template_response.partial_name)
+                .maybe_content(template_response.content)
                 .navbar(is_signed_in)
-                .maybe_messages(template_response.messages.clone())
+                .maybe_messages(template_response.messages)
                 .build()
                 .render(&template_engine);
         }

@@ -42,7 +42,7 @@ pub fn create_app(
         .merge(auth_router)
         .route("/public", get(get_public))
         .route("/", get(get_root))
-        .layer(middleware::from_fn_with_state(
+        .layer(middleware::map_response_with_state(
             app_state.clone(),
             with_template_response,
         ))
