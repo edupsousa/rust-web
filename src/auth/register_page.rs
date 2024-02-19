@@ -1,12 +1,7 @@
-use super::{db_user, layer::AuthSession};
-use crate::{
-    app::AppState,
-    layout::{messages::PageMessages, page_template::PageTemplate},
-    templates::TemplateEngine,
-};
+use super::db_user;
+use crate::{app::AppState, layout::template_response::TemplateResponse};
 use axum::{
     extract::State,
-    http::StatusCode,
     response::{IntoResponse, Redirect, Response},
     Form,
 };
@@ -38,41 +33,31 @@ pub struct RegisterPageData {
     errors: Option<ValidationErrors>,
 }
 
-pub async fn get_register(State(app): State<AppState>, auth_session: AuthSession) -> Response {
-    render_register_page(
-        &app.template_engine,
-        RegisterPageData::default(),
-        auth_session.user.is_some(),
-        None,
-    )
+pub async fn get_register() -> Response {
+    TemplateResponse::new("auth/register")
+        .content(RegisterPageData::default())
+        .into_response()
 }
 
 pub async fn post_register(
     State(app): State<AppState>,
-    auth_session: AuthSession,
     Form(form): Form<RegisterForm>,
 ) -> Response {
+    let response = TemplateResponse::new("auth/register");
     if let Err(errors) = form.validate() {
-        return render_register_page(
-            &app.template_engine,
-            RegisterPageData {
+        return response
+            .content(RegisterPageData {
                 form,
                 errors: Some(errors),
-            },
-            auth_session.user.is_some(),
-            None,
-        );
+            })
+            .into_response();
     }
 
     if db_user::user_exists(&app.database_connection, &form.email).await {
-        let mut messages = PageMessages::new();
-        messages.error("User already exists");
-        return render_register_page(
-            &app.template_engine,
-            RegisterPageData { form, errors: None },
-            auth_session.user.is_some(),
-            Some(messages),
-        );
+        return response
+            .content(RegisterPageData { form, errors: None })
+            .add_error_message("User already exists")
+            .into_response();
     }
 
     match db_user::create_user(&app.database_connection, form.into()).await {
@@ -80,21 +65,10 @@ pub async fn post_register(
         Err(e) => {
             tracing::error!("Failed to create user: {:?}", e);
 
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user").into_response()
+            response
+                .content(RegisterPageData::default())
+                .add_error_message("Failed to create user")
+                .into_response()
         }
     }
-}
-
-fn render_register_page(
-    template_engine: &TemplateEngine,
-    data: RegisterPageData,
-    is_signed_in: bool,
-    messages: Option<PageMessages>,
-) -> Response {
-    PageTemplate::builder("auth/register")
-        .content(serde_json::to_value(data).unwrap())
-        .navbar(is_signed_in)
-        .maybe_messages(messages)
-        .build()
-        .render(template_engine)
 }

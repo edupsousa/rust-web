@@ -39,8 +39,4 @@ impl PageMessages {
     pub fn success(&mut self, text: &str) {
         self.add(PageMessage::new(MessageLevel::Success, text));
     }
-
-    pub fn error(&mut self, text: &str) {
-        self.add(PageMessage::new(MessageLevel::Error, text));
-    }
 }
