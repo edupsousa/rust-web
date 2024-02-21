@@ -1,11 +1,17 @@
 <div class="container">
   <h1 class="title">Profile</h1>
   <form class="form" action="/user/profile" method="post">
-
     <div class="field">
       <label class="label">Display Name</label>
       <div class="control">
-        <input class="input {{#if errors.display_name}}is-danger{{/if}}" type="text" placeholder="Enter your display name" name="display_name" id="display_name" value="{{form.display_name}}">
+        <input
+          class="input {{#if errors.display_name}}is-danger{{/if}}"
+          type="text"
+          placeholder="Enter your display name"
+          name="display_name"
+          id="display_name"
+          value="{{ form.display_name }}"
+        />
       </div>
       {{#if errors.display_name}}{{> form/error errors.display_name}}{{/if}}
     </div>
