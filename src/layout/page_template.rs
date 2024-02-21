@@ -1,40 +1,49 @@
-use crate::templates::{render_to_response, TemplateEngine};
+use crate::templates::TemplateEngine;
 
 use super::{messages::PageMessages, navbar::NavbarTemplateData};
-use axum::response::Response;
+use axum::{
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
+};
 use serde::Serialize;
 use serde_json::Value;
 
 #[derive(Serialize)]
-pub struct PageTemplate
-{
+pub struct PageTemplate {
     navbar: NavbarTemplateData,
     content: Option<Value>,
     messages: Option<PageMessages>,
     template_name: String,
 }
 
-impl PageTemplate
-{
+impl PageTemplate {
     pub fn builder(template_name: impl Into<String>) -> PageTemplateBuilder {
         PageTemplateBuilder::new(template_name)
     }
 
     pub fn render(&self, template_engine: &TemplateEngine) -> Response {
-        render_to_response(template_engine, "layout/page", self)
+        match template_engine.render("layout/page", self) {
+            Ok(contents) => Html(contents).into_response(),
+            Err(e) => {
+                tracing::error!("Failed to render template: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to render page template",
+                )
+                    .into_response()
+            }
+        }
     }
 }
 
-pub struct PageTemplateBuilder
-{
+pub struct PageTemplateBuilder {
     template_name: String,
     content: Option<Value>,
     navbar: Option<NavbarTemplateData>,
     messages: Option<PageMessages>,
 }
 
-impl PageTemplateBuilder
-{
+impl PageTemplateBuilder {
     pub fn new(template_name: impl Into<String>) -> Self {
         Self {
             template_name: template_name.into(),
