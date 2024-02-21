@@ -10,7 +10,7 @@ use serde_json::Value;
 
 #[derive(Serialize)]
 pub struct PageTemplate {
-    navbar: NavbarTemplateData,
+    navbar: Option<NavbarTemplateData>,
     content: Option<Value>,
     messages: Option<PageMessages>,
     template_name: String,
@@ -70,7 +70,7 @@ impl PageTemplateBuilder {
 
     pub fn build(self) -> PageTemplate {
         PageTemplate {
-            navbar: self.navbar.unwrap_or_default(),
+            navbar: self.navbar,
             content: self.content,
             messages: self.messages,
             template_name: self.template_name,
