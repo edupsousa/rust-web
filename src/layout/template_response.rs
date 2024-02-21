@@ -56,6 +56,25 @@ impl IntoResponse for TemplateResponse {
     }
 }
 
+struct TemplateStateWrapper {
+    app_state: AppState,
+    auth_session: AuthSession,
+    template_response: TemplateResponse,
+}
+
+impl IntoResponse for TemplateStateWrapper {
+    fn into_response(self) -> Response {
+        let template_engine = self.app_state.template_engine;
+        let is_signed_in = self.auth_session.user.is_some();
+        PageTemplate::builder(self.template_response.partial_name)
+            .maybe_content(self.template_response.content)
+            .navbar(is_signed_in)
+            .maybe_messages(self.template_response.messages)
+            .build()
+            .render(&template_engine)
+    }
+}
+
 pub async fn with_template_response(
     State(app_state): State<AppState>,
     auth_session: AuthSession,
@@ -64,14 +83,11 @@ pub async fn with_template_response(
     let response = match response.extensions().get::<TemplateResponse>() {
         Some(template_response) => {
             let template_response = template_response.to_owned();
-            let template_engine = app_state.template_engine;
-            let is_signed_in = auth_session.user.is_some();
-            return PageTemplate::builder(template_response.partial_name)
-                .maybe_content(template_response.content)
-                .navbar(is_signed_in)
-                .maybe_messages(template_response.messages)
-                .build()
-                .render(&template_engine);
+            TemplateStateWrapper {
+                app_state,
+                auth_session,
+                template_response,
+            }.into_response()
         }
         None => response,
     };
