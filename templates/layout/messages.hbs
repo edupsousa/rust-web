@@ -1,8 +1,8 @@
 {{#if messages}}
-<ul style="position: absolute; bottom: 0; right: 1em;" class="mb-2 mr-2">
+<ul id="page-messages">
   {{#each messages}}
   <li
-    style="color: var(--pico-{{#if (eq level 'error')}}del{{else}}ins{{/if}}-color);"
+    class="{{ level }}"
     x-data="{ isVisible: true }"
     x-show="isVisible"
     x-init="setTimeout(() => { isVisible = false }, 5000)"
