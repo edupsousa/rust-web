@@ -2,7 +2,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct PageMessage {
-    pub class: &'static str,
+    pub level: &'static str,
     pub text: String,
 }
 
@@ -13,12 +13,12 @@ pub enum MessageLevel {
 
 impl PageMessage {
     pub fn new(level: MessageLevel, text: impl Into<String>) -> PageMessage {
-        let class = match level {
-            MessageLevel::Error => "is-danger",
-            MessageLevel::Success => "is-success",
+        let level = match level {
+            MessageLevel::Error => "error",
+            MessageLevel::Success => "success",
         };
         PageMessage {
-            class,
+            level,
             text: text.into(),
         }
     }

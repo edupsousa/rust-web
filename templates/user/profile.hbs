@@ -1,25 +1,21 @@
-<div class="container">
-  <h1 class="title">Profile</h1>
+<main class="container">
+  <h1>Profile</h1>
   <form class="form" action="/user/profile" method="post">
-    <div class="field">
-      <label class="label">Display Name</label>
-      <div class="control">
+    <fieldset>
+      <label>
+        Display Name
         <input
-          class="input {{#if errors.display_name}}is-danger{{/if}}"
           type="text"
-          placeholder="Enter your display name"
-          name="display_name"
           id="display_name"
+          name="display_name"
+          placeholder="Enter your display name"
           value="{{ form.display_name }}"
+          aria-invalid="{{#if errors.display_name}}true{{/if}}"
         />
-      </div>
-      {{#if errors.display_name}}{{> form/error errors.display_name}}{{/if}}
-    </div>
+        {{#if errors.display_name}}{{> form/error errors.display_name}}{{/if}}
+      </label>
+    </fieldset>
 
-    <div class="field">
-      <div class="control">
-        <button class="button is-primary">Save</button>
-      </div>
-    </div>
+    <button type="submit">Save</button>
   </form>
-</div>
+</main>

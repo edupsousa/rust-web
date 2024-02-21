@@ -1,40 +1,33 @@
-<div class="container">
-  <h1 class="title">Login</h1>
-  <form class="form" action="/login{{#if next_url }}?next={{ next_url }}{{/if}}" method="post">
-    <div class="field">
-      <label class="label">Email</label>
-      <div class="control">
+<main class="container">
+  <h1>Login</h1>
+  <form action="/login{{#if next_url }}?next={{ next_url }}{{/if}}" method="post">
+    <fieldset>
+      <label>
+        Email
         <input
-          class="input {{#if errors.email}}is-danger{{/if}}"
           type="email"
           placeholder="Enter your email"
           name="email"
           id="email"
           value="{{ form.email }}"
+          aria-invalid="{{#if errors.email}}true{{/if}}"
         />
-      </div>
-      {{#if errors.email }}{{> form/error errors.email}}{{/if}}
-    </div>
+        {{#if errors.email }}{{> form/error errors.email}}{{/if}}
+      </label>
 
-    <div class="field">
-      <label class="label">Password</label>
-      <div class="control">
+      <label>
+        Password
         <input
-          class="input {{#if errors.password}}is-danger{{/if}}"
           type="password"
           placeholder="Enter your password"
           name="password"
           id="password"
-          value="{{ form.password }}"
+          aria-invalid="{{#if errors.password}}true{{/if}}"
         />
-      </div>
-      {{#if errors.password }}{{> form/error errors.password}}{{/if}}
-    </div>
+        {{#if errors.password }}{{> form/error errors.password}}{{/if}}
+      </label>
+    </fieldset>
 
-    <div class="field">
-      <div class="control">
-        <button class="button is-primary">Login</button>
-      </div>
-    </div>
+    <button type="submit">Login</button>
   </form>
-</div>
+</main>

@@ -5,7 +5,6 @@ pub struct NavbarTemplateData {
     login_visible: bool,
     signup_visible: bool,
     logout_visible: bool,
-    private_visible: bool,
 }
 
 impl NavbarTemplateData {
@@ -14,7 +13,6 @@ impl NavbarTemplateData {
             login_visible: !is_signed_in,
             signup_visible: !is_signed_in,
             logout_visible: is_signed_in,
-            private_visible: is_signed_in,
         }
     }
 }
